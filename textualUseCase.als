@@ -9,10 +9,10 @@ open util/ternary as ter
 
 // Fig. 1
 /* Goal Level Properties */
-abstract sig GoalLvlProp{}
-sig Summary extends GoalLvlProp{}
-sig UserGoal extends GoalLvlProp{}
-sig SubFunction extends GoalLvlProp{}
+/*abstract sig GoalLvlProp{}*/
+/*sig Summary extends GoalLvlProp{}*/
+/*sig UserGoal extends GoalLvlProp{}*/
+/*sig SubFunction extends GoalLvlProp{}*/
 /* ************************************ */
 /* Step Types */
 /*abstract sig StepType{}*/
@@ -26,17 +26,17 @@ sig SystemR extends ActionStep {}
 sig Assume extends ActionStep {}
 /* ************************************ */
 /* Use Case Properties */
-sig UCProperties{
-	goal: one GoalProperty,
-	primaryActor: one ActorProperty,
-	goalLevel: one GoalLvlProp,
-	precondition: one PrecondProperty
-}
+/*sig UCProperties{*/
+	/*goal: one GoalProperty,*/
+	/*primaryActor: one ActorProperty,*/
+	/*goalLevel: one GoalLvlProp,*/
+	/*precondition: one PrecondProperty*/
+/*}*/
 //fact { bijective[goalLevel, GoalLvlProp] }
 
-sig GoalProperty{}
-sig ActorProperty{}
-sig PrecondProperty{}
+/*sig GoalProperty{}*/
+/*sig ActorProperty{}*/
+/*sig PrecondProperty{}*/
 /* ************************************ */
 /* Kinds of Steps */
 abstract sig Step{ 	stepID: one StepID }
@@ -46,13 +46,11 @@ sig Atom extends Step{
 	stepType: one ActionStep,
 	label: one Label,
 	extensions: set ExtensionID
+} {
+	stepType not in Assume => #extensions = 0
 }
 fact { bijective[stepType,ActionStep] }
-fact { all uc: UseCase, e: Extension 
-			| e.id in ran[uc.mainSuccessScenario.flow].(Atom <: extensions) +
-						ran[uc.mainSuccessScenario.flow].(Choice <: extensions) +
-						ran[uc.mainSuccessScenario.flow].(Concurrent <: extensions) 
-			=> e in uc.extensions } //todas as extensões de passos individuais estão contidas no useCase
+
 sig StepID{}
 sig Label{}
 sig ExtensionID{}
@@ -69,6 +67,9 @@ sig Concurrent extends Step{
 /* Goto */
 sig Goto extends Step{
 	otherStepID: one StepID
+} {
+	// um goto não pode apontar para ele proprio
+	stepID not in otherStepID
 }
 /* Include */
 sig Include extends Step{
@@ -86,6 +87,9 @@ sig Extension {
 	id: ExtensionID,
 	condition: one Condition,
 	extensionScenario: Flow
+} {
+	// pra não haver extensions soltos
+	Extension in univ.extensions
 }
 fact { bijective[id, ExtensionID] } // Def. 1.1 os id's são únicos. 
 											   //Def. 1.2 não há ExtensionID's sem um Extension
@@ -94,10 +98,18 @@ sig Condition{}
 /* Use Case */
 sig UseCase {
 	name: UCName,
-	properties: one UCProperties,
+	/*properties: one UCProperties,*/
 	mainSuccessScenario: one Flow,
 	extensions: set Extension
+}{
+	// o conj de extensions (alt flows) de um UC é igual ao conj de
+	// extension dos seus passos
+	extensions = { e: Extension | 
+		e.id in ran[mainSuccessScenario.flow].(Atom <: extensions) +
+		ran[mainSuccessScenario.flow].(Choice <: extensions) +
+		ran[mainSuccessScenario.flow].(Concurrent <: extensions) }
 }
+
 fact { bijective[name, UCName] }
 
 /* ************************************ */
@@ -113,12 +125,17 @@ sig UseCaseModel {
 abstract sig ActionBlock {
 	actionSteps: seq Atom
 } {
+	// os action blocks não podem estar vazios
 	#actionSteps > 0
+	// o 1º passo dos AB é sempre um Input
 	first[actionSteps].stepType in Input
+	// e é so o 1º, nunca aparece no corpo restante de um AB
 	Input not in univ.(rest[actionSteps]).stepType
+	// o Output, se aparecer, é sempre na última posição de um AB
 	Output not in univ.(butlast[actionSteps]).stepType
 	// os actionsBlocks tem de estar ligados a Flow's
 	all ab: ActionBlock | some f: Flow | ab in f.flow[univ]
+
 }
 
 sig Query extends ActionBlock {
@@ -164,8 +181,15 @@ sig Complete extends ActionBlock {
 sig Flow { 
 	flow: seq Step + ActionBlock
 } { 
+	//Def. 1.4
 	last[flow] in Goto + Success + Failure
-} //Def. 1.4
+	// e só podem ser o último
+	Goto + Success + Failure not in univ.(butlast[flow])
+	// pra n haver flows soltos
+	Flow in Extension.extensionScenario + UseCase.mainSuccessScenario
+	// os flows têm de ter pelo menos dois passos (discutivel)
+	#flow > 1
+} 
 fact { all s:Step | s in univ.(univ.flow) } //para não haver Step's fora de Flows
 /* ************************************ */
 /* Helper Functions */
@@ -176,5 +200,4 @@ fun inclui : UseCase -> UseCase {
 
 // Show
 pred Show{ }
-run Show for 5 but exactly 1 UseCaseModel, exactly 1 ActionBlock,
-exactly 5 Step
+run Show for 7 but exactly 1 UseCaseModel, exactly 4 ExtensionID
