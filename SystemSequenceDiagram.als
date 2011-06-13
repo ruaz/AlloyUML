@@ -4,7 +4,7 @@ open util/boolean
 open util/relation
 
 /* System Sequence Diagram */
-sig SystemSequenceDiagram {
+abstract sig SystemSequenceDiagram {
 	seqDid: SeqDid, 
 	system: Lifeline,
 	actor: Lifeline,
@@ -19,16 +19,16 @@ fact { bijective[seqDid, SeqDid] }
 // não pode haver referências cíclicas
 fact { acyclic[referencia, SystemSequenceDiagram] } 
 
-sig SeqDid {}
+abstract sig SeqDid {}
 /* ******************************** */
 /* Lifeline */
-sig Lifeline {} { 
+abstract sig Lifeline {} { 
 	// não há lifelines "soltas", ou são actores ou o sistema
 	Lifeline in SystemSequenceDiagram.system + SystemSequenceDiagram.actor
 }
 /* ******************************** */
 /* Message */
-sig Message {
+abstract sig Message {
 	source: Lifeline,
 	target: Lifeline
 } {
@@ -37,7 +37,7 @@ sig Message {
 }
 /* ******************************** */
 /* Ref */
-sig Ref {
+abstract sig Ref {
 	reference: SeqDid
 } {
 	// não há Refs "soltos"
@@ -51,7 +51,7 @@ abstract sig Frame {} {
 }
 
 /* Alt */
-sig Alt extends Frame {
+abstract sig Alt extends Frame {
 	conditions: seq Bool, // não sei se Bool será a melhor representação
 						  // das condições
 	operands: seq Operand
@@ -61,19 +61,19 @@ sig Alt extends Frame {
 }
 
 /* Opt */
-sig Opt extends Frame  {
+abstract sig Opt extends Frame  {
 	condition: Bool,
 	operand: Operand
 }
 
 /* Break */
-sig Break extends Frame  {
+abstract sig Break extends Frame  {
 	condition: Bool,
 	operand: Operand
 }
 
 /* Loop */
-sig Loop extends Frame  {
+abstract sig Loop extends Frame  {
 	condition: Bool,
 	operand: Operand,
 	minint: Int,
@@ -84,7 +84,7 @@ sig Loop extends Frame  {
 }
 
 /* Operand */
-sig Operand {
+abstract sig Operand {
 	messages: seq Message
 } {
 	// não há operandos "soltos"

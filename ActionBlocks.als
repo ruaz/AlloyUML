@@ -3,6 +3,7 @@ module umlFormalModule/ActionBlocks
 open util/sequniv
 open util/relation
 
+
 abstract sig ActionBlock {
 	actionSteps: seq ActionStep
 } {
