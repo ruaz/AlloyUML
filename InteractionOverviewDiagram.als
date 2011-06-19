@@ -10,11 +10,12 @@ abstract sig InteractionOverviewDiagram {
 }
 
 abstract sig AltPoint {
-	condition: Bool,
-	alt_flow: set (seq Ref + SystemSequenceDiagram + AltPoint)
+	conditions: seq Bool,
+	alt_flow: seq (seq IODRef + SystemSequenceDiagram + AltPoint)
 } {
+    #conditions = #alt_flow
+    #conditions > 0
 	AltPoint in univ.(InteractionOverviewDiagram.flow)
-	#alt_flow > 1
 }
 /*fact { all a in alt_flow |*/
 /*	   	(seq Ref + SystemSequenceDiagram + AltPoint) in alt_flow}*/
@@ -27,5 +28,5 @@ abstract sig IODRef {
 	IODRef in univ.(InteractionOverviewDiagram.flow)
 }
 /* ************************************ */
-run {} for 5 but exactly 1 InteractionOverviewDiagram, exactly 2
-IODRef, exactly 2 AltPoint
+
+run {} 
