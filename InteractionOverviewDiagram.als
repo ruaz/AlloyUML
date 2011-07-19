@@ -149,7 +149,7 @@ fact messages {
              PaymentNOK -> Actor +
              ChoosesCat -> System +
              ShowRes -> Actor +
-             ChoosesProd -> System +
+             ChoosesProd -> Sysmem +
              SubmitPInfo -> System + 
              CarryOutPayment -> System +
              ProvideConfirmationNumber -> Actor
