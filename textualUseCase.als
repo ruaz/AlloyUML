@@ -41,7 +41,7 @@ abstract sig Assume extends ActionStep {}
 /* Kinds of Steps */
 abstract sig Step{ stepID: one StepID } { 
     // para não haver Steps soltos
-    Step in Choice.alternatives[univ] +
+    Step in /*Choice.alternatives[univ] + (retirados os passos Choice)*/
             /*Concurrent.steps +*/
             Flow.flow[univ]
     // um Step só pode aparecer uma vez num flow e apenas num único flow
@@ -62,10 +62,10 @@ abstract sig StepID{}
 abstract sig Label{}{ Label in Atom.label }
 abstract sig ExtensionID{}
 /* Choice */
-abstract sig Choice extends Step{
-	alternatives: set (seq Step),
-	extensions: set ExtensionID
-}
+/*abstract sig Choice extends Step{*/
+/*	alternatives: set (seq Step),*/
+/*	extensions: set ExtensionID*/
+/*}*/
 /* Concurrent */
 /*abstract sig Concurrent extends Step{*/
 /*	steps: set (set Step),*/
@@ -115,7 +115,7 @@ abstract sig UseCase {
 	// extension dos seus passos
 	extensions = { e: Extension | 
 		e.id in ran[mainSuccessScenario.flow].(Atom <: extensions) +
-		ran[mainSuccessScenario.flow].(Choice <: extensions) +
+		/*ran[mainSuccessScenario.flow].(Choice <: extensions) +*/
 		/*ran[mainSuccessScenario.flow].(Concurrent <: extensions) +*/
         (ActionBlock <: ran[mainSuccessScenario.flow]).actionSteps[univ].(Atom <: extensions)}
     // um Goto não pode apontar para um passo fora do use case onde está. no entanto, como está agora, 
