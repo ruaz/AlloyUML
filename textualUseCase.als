@@ -143,7 +143,7 @@ abstract sig ActionBlock {
 	actionSteps: seq Atom
 } {
 	// os action blocks não podem estar vazios
-	#actionSteps > 0
+	#actionSteps > 1
 	// o 1º passo dos AB é sempre um Input
 	first[actionSteps].stepType in Input
 	// e é so o 1º, nunca aparece no corpo restante de um AB
