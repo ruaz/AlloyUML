@@ -37,6 +37,18 @@ abstract sig Assume extends ActionStep {}
 /*sig GoalProperty{}*/
 /*sig ActorProperty{}*/
 /*sig PrecondProperty{}*/
+abstract sig Actor {
+    inheritance: lone Actor    
+}{
+    all a: Actor | not isConnected[a] 
+        => some useCasesAssociatedWith[a]
+}
+fact  { acyclic[Actor<:inheritance, Actor] }
+abstract sig User, System extends Actor {}
+/*fact{ */
+/*    all a: Actor | not isConnected(a) */
+/*        => some useCasesAssociatedWith(a)*/
+/*}*/
 /* ************************************ */
 /* Kinds of Steps */
 abstract sig Step{ stepID: one StepID } { 
@@ -109,7 +121,8 @@ abstract sig UseCase {
 	name: UCName,
 	/*properties: one UCProperties,*/
 	mainSuccessScenario: one Flow,
-	extensions: set Extension
+	extensions: set Extension,
+    inheritance: set UseCase
 }{
 	// o conj de extensions (alt flows) de um UC é igual ao conj de
 	// extension dos seus passos
@@ -127,17 +140,27 @@ abstract sig UseCase {
     UseCase in UseCaseModel.useCases[univ]
 }
 
+// inheritance é assimétrico, irrflexivo e aciclico
+fact { acyclic[UseCase <: inheritance, UseCase]}
 fact { bijective[name, UCName] }
 
 /* ************************************ */
 /* Use Case Model (Def.1) */
 abstract sig UseCaseModel {
 	rootUCName: one UCName,
-	useCases: UCName -> UseCase
+	useCases: UCName -> UseCase,
+    actors: some Actor,
+    use: Actor set -> set UseCase,
 }{
 	rootUCName in dom[useCases]
 	all n: UCName, u: UseCase | n -> u in useCases => n in u.name
+    // a use case can not be associated with two actors related with inheritance
+    all u: UCName.useCases, disj a, a': use.u | a not in a'.^(Actor<:inheritance)
+    // no heirs of an actor associated with a use case can be associated with a use case
+    all a: actors | some use[a] => no use[ a.^(Actor<:inheritance) ]
+    
 }
+
 /* ************************************ */
 abstract sig ActionBlock {
 	actionSteps: seq Atom
@@ -212,6 +235,18 @@ abstract sig Flow {
 /* Helper Functions */
 fun inclui : UseCase -> UseCase { 
 	{ uc1,uc2 : UseCase | uc2 in name.(uc1.mainSuccessScenario.flow.ucName[univ]) }
+}
+fun parentsOf[a : Actor] : lone Actor {
+    a.(Actor<:inheritance)
+}
+fun childrenOf[a : Actor] : set Actor {
+    (Actor<:inheritance).a
+}
+pred isConnected [a : Actor] {
+   some parentsOf[a] or some childrenOf[a]
+}
+fun useCasesAssociatedWith[a : Actor] : set UseCase {
+    UseCaseModel.use[a]
 }
 /* ************************************ */
 /* Instância para teste */
@@ -318,4 +353,4 @@ fun inclui : UseCase -> UseCase {
 /*           Flow5 -> 1 -> Goto8*/
 /*}*/
 // Show
-run {} for 20 but exactly 3 Include, exactly 2 Goto
+run {#use > 2} for 20 but exactly 1 UseCaseModel
