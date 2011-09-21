@@ -1,6 +1,5 @@
 module umlFormalModels/SystemSequenceDiagram
 
-open util/boolean
 open util/relation
 
 /* System Sequence Diagram */
@@ -8,11 +7,12 @@ abstract sig SystemSequenceDiagram {
 	seqDid: SeqDid, 
 	system: Lifeline,
 	actor: Lifeline,
-	messages: seq Message + Frame + Ref
+	messages: seq Message + Frame + Ref,
+    /*ucLink: lone UCName // apenas para efeitos de verificação de consistência*/
 } {
 	system not in actor // actor e sistema são duas lifelines diferentes
-	#messages > 0 // não permite DS vazios
-	lone messages.conditions.True[univ]
+	/*#messages > 0 // não permite DS vazios*/ --facto comentado para permitir inclusoes de dummy ssd's
+	/*lone messages.conditions.True[univ] (facto apagado por ja não haver bools)*/
     // as mensagens trocadas num dado SSD tem as mesmas lifelines que esse SSD
     (messages[univ].source + messages[univ].target) in (system + actor)
 }
@@ -43,7 +43,7 @@ abstract sig Ref {
 	reference: SeqDid
 } {
 	// não há Refs "soltos"
-	Ref in SystemSequenceDiagram.messages[univ]
+	Ref in SystemSequenceDiagram.messages[univ] + Operand.messages[univ]
 }
 
 /* ******************************** */
@@ -54,7 +54,7 @@ abstract sig Frame {} {
 
 /* Alt */
 abstract sig Alt extends Frame {
-	conditions: seq Bool, // não sei se Bool será a melhor representação
+	conditions: seq Condition, // não sei se Bool será a melhor representação
 						  // das condições
 	operands: seq Operand
 } {
@@ -64,19 +64,19 @@ abstract sig Alt extends Frame {
 
 /* Opt */
 abstract sig Opt extends Frame  {
-	condition: Bool,
+	condition: Condition,
 	operand: Operand
 }
 
 /* Break */
 abstract sig Break extends Frame  {
-	condition: Bool,
+	condition: Condition,
 	operand: Operand
 }
 
 /* Loop */
 abstract sig Loop extends Frame  {
-	condition: Bool,
+	condition: Condition,
 	operand: Operand,
 	minint: Int,
 	maxint: Int
@@ -92,6 +92,7 @@ abstract sig Operand {
 	// não há operandos "soltos"
 	Operand in Opt.operand + Break.operand + Loop.operand + Alt.operands[univ]
 }
+abstract sig Condition {}
 /* ******************************** */
 /* Helper Functions */
 fun referencia : SystemSequenceDiagram -> SystemSequenceDiagram {
@@ -108,94 +109,85 @@ fun framePaiParaFrameFilho : Frame -> Frame {
 // se um DSS é referenciado por outro, então tem o mesmo actor e sistema que o que o referencia
 fact { all sd1,sd2 : SystemSequenceDiagram | sd1 -> sd2 in referencia 
 		=> sd2.actor in sd1.actor && sd2.system in sd1.system }
-// o actor de um DSS não pode ser o sistema de outro e vice-versa
+/*// o actor de um DSS não pode ser o sistema de outro e vice-versa*/
 fact { all sd1,sd2 : SystemSequenceDiagram | sd1.actor not in sd2.system }
-// não é possível encontrar um frame dentro de si próprio
+/*// não é possível encontrar um frame dentro de si próprio*/
 fact framesPaiFilhoAciclico { acyclic[framePaiParaFrameFilho, Frame] }
 /* ******************************** */
-/* Instância para teste */
-/*one sig SystemSequenceDiagram1 extends SystemSequenceDiagram {}*/
-/*one sig System extends Lifeline {}*/
-/*one sig Actor extends Lifeline {}*/
-/*one sig SeqDid1 extends SeqDid {}*/
-/*one sig Message1,Message2,Message3,Message4,Message5,Message6,Message7,Message8,Message9,Message10,Message11,Message12,Message13 extends Message {}*/
-/*one sig Opt1, Opt2 extends Opt {}*/
-/*one sig Break1, Break2 extends Break {}*/
-/*one sig Loop1, Loop2 extends Loop {}*/
-/*one sig Operand1, Operand2, Operand3, Operand4, Operand5, Operand6 extends Operand {}*/
-/*/* ************************************ */
-/*fact ssds { */
-/*    seqDid = SystemSequenceDiagram1 -> SeqDid1*/
-/*    system = SystemSequenceDiagram1 -> System*/
-/*    actor = SystemSequenceDiagram1 -> Actor*/
-/*    SystemSequenceDiagram1 <: messages = SystemSequenceDiagram1 -> 0 -> Loop1 +*/
-/*               SystemSequenceDiagram1 -> 1 -> Message4 +*/
-/*               SystemSequenceDiagram1 -> 2 -> Message5 +*/
-/*               SystemSequenceDiagram1 -> 3 -> Break1 +*/
-/*               SystemSequenceDiagram1 -> 4 -> Message7 +*/
-/*               SystemSequenceDiagram1 -> 5 -> Break2 +*/
-/*               SystemSequenceDiagram1 -> 6 -> Loop2 +*/
-/*               SystemSequenceDiagram1 -> 7 -> Message12 +*/
-/*               SystemSequenceDiagram1 -> 8 -> Message13*/
-/*}*/
-/*fact Messages {*/
-/*    source = Message1 -> Actor +*/
-/*             Message2 -> System +*/
-/*             Message3 -> Actor +*/
-/*             Message4 -> Actor +*/
-/*             Message5 -> System +*/
-/*             Message6 -> System +*/
-/*             Message7 -> System +*/
-/*             Message8 -> Actor +*/
-/*             Message9 -> Actor +*/
-/*             Message10 -> System +*/
-/*             Message11 -> System +*/
-/*             Message12 -> System +*/
-/*             Message13 -> System*/
-/**/
-/*    target = Message1 -> System +*/
-/*             Message2 -> Actor +*/
-/*             Message3 -> System +*/
-/*             Message4 -> System +*/
-/*             Message5 -> System +*/
-/*             Message6 -> Actor +*/
-/*             Message7 -> Actor +*/
-/*             Message8 -> System +*/
-/*             Message9 -> System +*/
-/*             Message10 -> System +*/
-/*             Message11 -> Actor +*/
-/*             Message12 -> System +*/
-/*             Message13 -> Actor*/
-/*}*/
-/*fact Opts {*/
-/*    Opt <: condition = Opt1 -> True + Opt2 -> True*/
-/*    Opt <: operand = Opt1 -> Operand2 +*/
-/*                     Opt2 -> Operand6*/
-/*}*/
-/*fact Breaks {  */
-/*    Break <: condition = Break1 -> True + Break2 -> True*/
-/*    Break <: operand = Break1 -> Operand3 +*/
-/*                       Break2 -> Operand4*/
-/*}*/
-/*fact Loops {  */
-/*    Loop <: condition = Loop1 -> True + Loop2 -> True*/
-/*    Loop <: operand = Loop1 -> Operand1 +*/
-/*                      Loop2 -> Operand5*/
-/*    // valores aleatorios no min e maxint*/
-/*    minint = Loop1 -> 1 + Loop2 -> 1*/
-/*    maxint = Loop1 -> 1 + Loop2 -> 1*/
-/*}*/
-/*fact Operands {  */
-/*    Operand <: messages = Operand1 -> 0 -> Message1 +*/
-/*               Operand1 -> 1 -> Message2 +*/
-/*               Operand1 -> 2 -> Opt1 +*/
-/*               Operand2 -> 0 -> Message3 +*/
-/*               Operand3 -> 0 -> Message6 +*/
-/*               Operand4 -> 0 -> Message8 +*/
-/*               Operand5 -> 0 -> Message9 +*/
-/*               Operand5 -> 1 -> Message10 +*/
-/*               Operand5 -> 2 -> Opt2 +*/
-/*               Operand6 -> 0 -> Message11*/
-/*}*/
-/**/
 run { } for 10 but 5 int 
+
+/* ************************************ */
+/*Instância*/
+one sig PerformSessionSSD,PerformTransactionSSD extends SystemSequenceDiagram {}    
+one sig Customer,ATMSystem extends Lifeline {}    
+one sig Loop1 extends Loop {}    
+one sig Opt1 extends Opt {}    
+one sig Break1 extends Break {}    
+one sig CardNotOK,OKIsTrue,CustomerWantsMore extends Condition {}    
+one sig Operand1,Operand2,Operand3 extends Operand {}    
+one sig insertCard,isCardOK,readCard,requestPin,enterPin,requestTransaction,wantAnotherTransaction,selectNo,
+        ejectCard,terminateSession,ejectCard2,notify,selectYes extends Message {}
+one sig Ref1 extends Ref {}    
+one sig ssdid1,ssdid2 extends SeqDid {}    
+
+fact ssd { seqDid = PerformSessionSSD -> ssdid1 + PerformTransactionSSD -> ssdid2
+           actor = PerformSessionSSD -> Customer + PerformTransactionSSD -> Customer
+           system = PerformSessionSSD -> ATMSystem + PerformTransactionSSD -> ATMSystem
+            SystemSequenceDiagram <: messages = PerformSessionSSD -> 0 -> insertCard +
+                      PerformSessionSSD -> 1 -> isCardOK +
+                      PerformSessionSSD -> 2 -> Break1 +
+                      PerformSessionSSD -> 3 -> readCard +
+                      PerformSessionSSD -> 4 -> requestPin +
+                      PerformSessionSSD -> 5 -> enterPin +
+                      PerformSessionSSD -> 6 -> Loop1 +
+                      PerformSessionSSD -> 7 -> selectNo +
+                      PerformSessionSSD -> 8 -> ejectCard +
+                      PerformSessionSSD -> 9 -> terminateSession
+                      --Operands
+            Operand <: messages = Operand1 -> 0 -> ejectCard2 +
+                      Operand1 -> 1 -> notify +
+
+                      Operand2 -> 0 -> requestTransaction +
+                      Operand2 -> 1 -> Ref1 +
+                      Operand2 -> 2 -> wantAnotherTransaction +
+                      Operand2 -> 3 -> Opt1 +
+
+                      Operand3 -> 0 -> selectYes
+}
+fact frames { Loop <: condition = Loop1 -> OKIsTrue 
+              Break <: condition = Break1 -> CardNotOK
+              Opt <: condition = Opt1 -> CustomerWantsMore
+              Break <: operand = Break1 -> Operand1 
+              Loop <: operand = Loop1 -> Operand2 
+              Opt <: operand = Opt1 -> Operand3 
+}
+fact refs { reference = Ref1 -> ssdid2 }
+fact mensagens { 
+    source = insertCard -> Customer +
+             isCardOK -> ATMSystem +
+             readCard -> ATMSystem +
+             requestPin -> ATMSystem +
+             enterPin -> Customer +
+             requestTransaction -> ATMSystem +
+             wantAnotherTransaction -> ATMSystem +
+             selectNo -> Customer +
+             ejectCard -> ATMSystem +
+             terminateSession -> ATMSystem +
+             ejectCard2 -> ATMSystem +
+             notify -> ATMSystem +
+             selectYes -> Customer
+
+    target = insertCard -> ATMSystem +
+             isCardOK -> ATMSystem +
+             readCard -> ATMSystem +
+             requestPin -> Customer +
+             enterPin -> ATMSystem +
+             requestTransaction -> Customer +
+             wantAnotherTransaction -> Customer +
+             selectNo -> ATMSystem +
+             ejectCard -> ATMSystem +
+             terminateSession -> ATMSystem +
+             ejectCard2 -> ATMSystem +
+             notify -> Customer +
+             selectYes -> ATMSystem
+}

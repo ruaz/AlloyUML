@@ -1,61 +1,6 @@
-module umlFormalModels/InteractionOverviewDiagram
-
-open umlFormalModels/SystemSequenceDiagram
 open util/relation
-open util/ternary
+opoen util/ternary
 
-abstract sig InteractionOverviewDiagram {
-	initialNode: IODRef + IODSSD + DecisionNode
-    // possivelmente o initialNode não pode ser um DecisionNode, mas para já fica
-} 
-// usando 'signature fact', a restrição só era aplicada se existisse um IOD na instancia
-// deste modo, força-se também a existência de um IOD
-//fact { #initialNode = 1 }
-
-
-abstract sig DecisionNode {
-	conditions: seq Condition,
-	alt_flow: seq ( IODRef + IODSSD + DecisionNode + FinalNode)
-} {
-    // tem de haver pelo menos 2 caminhos alternativos a partir de um DecisionNode
-    #alt_flow > 1
-    // há tantas condições quantos caminhos possíveis
-    #conditions = #alt_flow
-    // para não haver DecisionNode's orfãos
-	DecisionNode in (InteractionOverviewDiagram.initialNode +
-                     DecisionNode.@alt_flow[univ] +
-                     IODRef.nextNode + IODSSD.nextNode)
-    // o elemento apontado por cada alt_flow tem de ser diferente, senão é o mesmo caminho.
-    // implementado como: o tamanho da sequencia é igual ao tamanho do conj. das coisas apontadas
-    // por cada elemento da sequência. Se o tamanho do conj. fosse menor significava que havia 
-    // elementos da sequênca que apontavam para o mesmo sítio.
-    #alt_flow = #univ.alt_flow
-}
-/*fact { all a in alt_flow |*/
-/*	   	(seq Ref + IODSSD + DecisionNode) in alt_flow}*/
-/*fact { irreflexive[select13[alt_flow]] }*/
-
-abstract sig IODRef {
-	reference: SeqDid, // falta dizer k estes seqdid so podem vir de SystemSequenceDiagram
-    nextNode: IODRef + IODSSD + DecisionNode + FinalNode
-} {
-	// pra não haver IODRefs soltos
-	IODRef in (InteractionOverviewDiagram.initialNode + 
-                    DecisionNode.alt_flow[univ] +
-                    IODRef.@nextNode + IODSSD.nextNode)
-}
-// o próximo nodo não pode ser ele próprio
-fact nextNodeIrreflexive { irreflexive[IODSSD <: nextNode] and irreflexive[IODRef <: nextNode]}
-
-abstract sig IODSSD extends SystemSequenceDiagram{
-    nextNode: IODRef + DecisionNode + IODSSD + FinalNode
-}
-one sig FinalNode {} {
-    // tem de haver alguma coisa a ligar ao FinalNode
-    FinalNode in univ.(IODSSD <: nextNode + IODRef <: nextNode + DecisionNode.alt_flow)
-}
-/* ************************************ */
-/* Instância para teste */
 one sig PerformSessionIOD extends InteractionOverviewDiagram {}
 /*DecisionNodes*/
 one sig DecisionNode1, DecisionNode2 extends DecisionNode {}
@@ -145,5 +90,3 @@ fact messages {
     target = WantAnotherTransaction -> Customer +
              SelectYes -> ATMSystem
 }
-/* ************************************ */
-run {} for 10 but 5 int
