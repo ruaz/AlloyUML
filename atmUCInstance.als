@@ -8,266 +8,242 @@ one sig ATMUseCaseModel extends UseCaseModel {}
 /* ************************************ */
 one sig Customer extends User {}    
 /* ************************************ */
-one sig PerformSession, PerformTransaction, HandleInvalidPIN, WithdrawMoney, TransferMoney extends UseCase {}    
+one sig PerformSession, PerformTransaction, HandleInvalidPIN, WithdrawMoney, TransferMoney, InsertPIN extends UseCase {}    
 /* ************************************ */
-one sig Ext1,Ext2,Ext3,Ext4,Ext5 extends Extension {}    
+one sig Alt1,Alt2,Alt3,Alt4,Alt5 extends Alternative {}
 /* ************************************ */
-one sig Flow1,Flow2,Flow3,Flow4 extends BasicFlow {}
+one sig Flow1 extends BasicFlow {}
 one sig Exception1,Exception2 extends UCException {}
-one sig AltPart1,AltPart2,AltPart3 extends AltPart {}    
+one sig AltPart1,AltPart2 extends AltPart {}    
+one sig InsertionFlow1,InsertionFlow2,InsertionFlow3,InsertionFlow4 extends InsertionFlow {}    
 /* ************************************ */
-one sig SystemCantReadCard,CustomerWantsMoreOps,TransactionNotApprovedDueToInvalidPIN,ThirdFailedPinAttempt,NotEnoughMoneyOnHand extends Condition {}
+one sig SystemCantReadCard,CustomerWantsMoreOps,OneOrTwoFailedPinAttempts,ThreeFailedPinAttempts,NotEnoughMoneyOnHand extends Condition {}
 /* ************************************ */
-one sig Complete1 extends Complete {}    
-one sig Query1,Query2,Query3,Query4,Query5 extends Query {}    
-one sig DecisionBlock1 extends DecisionBlock {}    
-one sig Internal1,Internal2,Internal3,Internal4 extends Internal {}    
-/* ************************************ */
+/*one sig Complete1 extends Complete {}    */
+/*one sig Query1,Query2,Query3,Query4,Query5 extends Query {}    */
+/*one sig Internal1,Internal2,Internal3,Internal4 extends Internal {}    */
+/*one sig Validation1 extends Validation {}    */
+/*/* ************************************ */
 /*PerformSession*/
 one sig CustomerInsertsCard,SystemVerifiesCard,SystemReadsCard,SystemAsksPIN,
-    CustomerEntersPIN, SystemRequestsOperation, SystemAsksForMoreOps,
-    CustomerWantsNoMoreOps,CustomerEntersNo, SystemEjectsCard, SystemTerminatesSession extends Atom {}    
+    CustomerEntersNo,SystemEjectsCard,SystemTerminatesSession extends Atom {}
 one sig IncludePerformTransaction extends Include {}    
-one sig Success1 extends Success {}    
 /*2a.Exception*/
 one sig SystemEjectsCard2,SystemNotifiesCustomer extends Atom {}    
-one sig Failure1 extends Failure {}    
-/*9a.AltPart*/
-one sig CustomerEntersYes extends Atom {}    
-one sig Goto6 extends Goto {}    
-/*ActionSteps*/
-one sig Input1,Input2,Input3,Input4 extends Input {}
-one sig Output1,Output2,Output3,Output4 extends Output {}
-one sig SR1,SR2,SR3,SR4 extends SystemR {}
-one sig SC1 extends SystemCheck {}
-one sig UC1 extends UserChoice {}
-/*StepIDs and ExtensionIDs*/
-one sig Sid1,Sid2,Sid3,Sid4,Sid5,Sid6,Sid7,Sid8,Sid9,Sid10,Sid11,Sid12
-			,Sid13,Sid14,Sid15,Sid16,Sid17,Sid18 extends StepID {}    
-one sig Eid1,Eid2 extends ExtensionID {}    
+/*5a.AltPart*/
+one sig CustomerEntersYes,SystemRequestsTransaction extends Atom {}    
+one sig Goto5 extends Goto {}    
+/*Choices*/
+one sig SystemValidation1 extends SystemValidation {}    
+one sig UserDecision1 extends UserDecision {}    
+/*StepIDs and AlternativeIDs*/
+one sig Sid1,Sid2,Sid3,Sid4,Sid5,Sid6,Sid7,Sid8,Sid9,Sid10,Sid11,Sid12,Sid13,Sid14 extends StepID {}    
+one sig Aid1,Aid2 extends AlternativeID {}    
 /*UC Name*/
 one sig Name1 extends UCName {}    
-/* ************************************ */
-/*PerformTransaction*/
-one sig CustomerSelectsTransaction,SystemRequestsDetails,CustomerEntersDetails,SystemApprovesTransaction,SystemPerformsAdequateSteps,
-        SystemPrintsReceipt extends Atom {}
-/*ActionSteps*/
-one sig Input5,Input6 extends Input {}    
-one sig Output5 extends Output {}    
-one sig SR5,SR6 extends SystemR {}    
-one sig SC2 extends SystemCheck {}    
-/*StepIDs and ExtensionIDs*/
-one sig Sid19,Sid20,Sid21,Sid22,Sid23,Sid24 extends StepID {}    
-one sig Eid3 extends ExtensionID {}    
+/*/* ************************************ */
+/*/*PerformTransaction*/
+/*/*ActionSteps*/
+/*/*StepIDs and AlternativeIDs*/
+one sig Aid3 extends AlternativeID {}    
 /*UC Name*/
 one sig Name2 extends UCName {}    
-/* ************************************ */
-/*HandleInvalidPIN*/
-one sig SystemChecksFailedPINAttempts extends Atom {}    
-one sig Goto4 extends Goto {}    
-/*1a.Exception*/
-one sig SystemRetainsCard,SystemNotifiesCustomer2 extends Atom {}    
-one sig Failure2 extends Failure {}    
-/*ActionSteps*/
-one sig SC3 extends SystemCheck {}    
-one sig SR7 extends SystemR {}    
-one sig Output6 extends Output {}    
-/*stepIDs and ExtensionIDs*/
-one sig Sid25,Sid26,Sid27,Sid28,Sid29 extends StepID {}    
-one sig Eid4 extends ExtensionID {}    
+/*/* ************************************ */
+/*/*HandleInvalidPIN*/
+one sig SystemRequestsPinAgain,CustomerReentersPin,SystemValidatesPin extends Atom {}    
+/*/*1a.Exception*/
+one sig SystemRetainsCard,SystemNotifiesCustomer2,SystemTerminatesSession2 extends Atom {}    
+/*Choices*/
+one sig SystemValidation2 extends SystemValidation {}    
+/*/*stepIDs and AlternativeIDs*/
+one sig Sid15,Sid16,Sid17,Sid18,Sid19,Sid20,Sid21,Sid22 extends StepID {}    
+one sig Aid4 extends AlternativeID {}    
 /*UC Name*/
 one sig Name3 extends UCName {}    
-/* ************************************ */
-/*WithdrawMoney*/
+/*/* ************************************ */
+/*/*WithdrawMoney*/
 one sig CustomerSelectsWithdraw,SystemRequestsAccType,CustomerSelectsAccType,SystemRequestsAmount,CustomerEntersAmount,SystemChecksMoneyOnHand,
-        SystemApprovesTransaction2,SystemDispensesCash,SystemPrintsReceipt2 extends Atom {}    
-/*5a.AltPart*/
+        SystemChecksPIN1,SystemDispensesCash,SystemPrintsReceipt2,SystemAsksForMoreTr extends Atom {}    
+one sig IncludeInsertPIN extends Include {}    
+/*/*5a.AltPart*/
 one sig SystemNotifiesMoneyNA,SystemRequestsSmallerAmount extends Atom {}    
-one sig GotoW4 extends Goto {}    
-/*ActionSteps*/
-one sig Input7,Input8,Input9 extends Input {}    
-one sig Output7,Output8,Output9,Output10 extends Output {}    
-one sig SC4,SC5 extends SystemCheck {}    
-one sig SR8,SR9 extends SystemR {}    
-/*stepIDs and ExtensionIDs*/
-one sig Sid30,Sid31,Sid32,Sid33,Sid34,Sid35,Sid36,Sid37,Sid38,Sid39,Sid40,Sid41 extends StepID {}    
-one sig Eid5 extends ExtensionID {}    
+one sig Goto6 extends Goto {}
+/*Choices*/
+one sig SystemValidation3,SystemValidation4 extends SystemValidation {}    
+/*/*stepIDs and AlternativeIDs*/
+one sig Sid23,Sid24,Sid25,Sid26,Sid27,Sid28,Sid29,Sid30,Sid31,Sid32,Sid33,Sid34,Sid35,Sid36 extends StepID {}    
+one sig Aid5 extends AlternativeID {}    
 /*UC Name*/
 one sig Name4 extends UCName {}    
 /* ************************************ */
 /*TransferMoney*/
-one sig CustomerSelectsTransfer,SystemRequestsAccsAndAmount,CustomerEntersAccsAndAmount,SystemApprovesTransaction3,
-        SystemPrintsReceipt3 extends Atom {}    
-/*ActionSteps*/
-one sig Input10,Input11 extends Input {}    
-one sig Output11 extends Output {}    
-one sig SC6 extends SystemCheck {}    
-one sig SR10 extends SystemR {}    
+one sig CustomerSelectsTransfer,SystemRequestsAccsAndAmount,CustomerEntersAccsAndAmount,SystemChecksPIN2,
+        SystemPrintsReceipt3,SystemAsksForMoreTr2 extends Atom {}    
+one sig IncludeInsertPIN2 extends Include {}    
+/*Choices*/
+one sig SystemValidation5 extends SystemValidation {}    
 /*stepIDs*/
-one sig Sid42,Sid43,Sid44,Sid45,Sid46 extends StepID {}
+one sig Sid37,Sid38,Sid39,Sid40,Sid41 extends StepID {}
 /*UC Name*/
 one sig Name5 extends UCName {}    
+/* ************************************ */
+/*InsertPIN*/
+one sig CustomerInsertsPin,SystemRequestsTransaction2 extends Atom {}    
+/*stepIDs*/
+one sig Sid42,Sid43,Sid44,Sid45 extends StepID {}    
+/*UC Name*/
+one sig Name6 extends UCName {}    
 /* ************************************ */
 fact ucmodel { actors = ATMUseCaseModel -> Customer
                use = ATMUseCaseModel -> Customer -> PerformSession
                useCases = ATMUseCaseModel -> Name1 -> PerformSession + ATMUseCaseModel -> Name2 -> PerformTransaction +
                          ATMUseCaseModel -> Name3 -> HandleInvalidPIN + ATMUseCaseModel -> Name4 -> WithdrawMoney +
-                         ATMUseCaseModel -> Name5 -> TransferMoney }
+                         ATMUseCaseModel -> Name5 -> TransferMoney + ATMUseCaseModel -> Name6 -> InsertPIN}
 fact usecases { goalLevel = PerformSession -> USERGOAL + PerformTransaction -> SUBFUNCTION + HandleInvalidPIN -> SUBFUNCTION + 
-                    WithdrawMoney -> SUBFUNCTION + TransferMoney -> SUBFUNCTION
-                extensions = PerformSession -> Ext1 + PerformSession -> Ext2 + PerformTransaction -> Ext3 + HandleInvalidPIN -> Ext4 + 
-                    WithdrawMoney -> Ext5 + WithdrawMoney -> Ext3 + TransferMoney -> Ext3
+                    WithdrawMoney -> SUBFUNCTION + TransferMoney -> SUBFUNCTION + InsertPIN -> SUBFUNCTION
+                alternatives = PerformSession -> Alt1 + PerformSession -> Alt2 + HandleInvalidPIN -> Alt4 + 
+                    WithdrawMoney -> Alt3 + WithdrawMoney -> Alt5 + TransferMoney -> Alt3
                 name = PerformSession -> Name1 + PerformTransaction -> Name2 + HandleInvalidPIN -> Name3 + WithdrawMoney -> Name4 +
-                    TransferMoney -> Name5
-                mainScenario = PerformSession -> Flow1 + PerformTransaction -> Flow2 + HandleInvalidPIN -> AltPart2 + WithdrawMoney -> Flow3 + 
-                    TransferMoney -> Flow4
+                    TransferMoney -> Name5 + InsertPIN -> Name6
+                mainScenario = PerformSession -> Flow1 + PerformTransaction -> EmptyFlow + HandleInvalidPIN -> InsertionFlow1 + 
+                WithdrawMoney -> InsertionFlow2 + TransferMoney -> InsertionFlow3 + InsertPIN -> InsertionFlow4
                 inheritsFrom = WithdrawMoney -> PerformTransaction + TransferMoney -> PerformTransaction}
-fact extensions { condition = Ext1 -> SystemCantReadCard + Ext2 -> CustomerWantsMoreOps + Ext3 -> TransactionNotApprovedDueToInvalidPIN + 
-                    Ext4 -> ThirdFailedPinAttempt + Ext5 -> NotEnoughMoneyOnHand
-                  type = Ext1 -> INTERNAL + Ext2 -> INTERNAL + Ext3 -> EXTERNAL + Ext4 -> INTERNAL + Ext5 -> INTERNAL
-                  extensionScenario = Ext1 -> Exception1 + Ext2 -> AltPart1 + Ext3 -> AltPart2 + Ext4 -> Exception2 +
-                      Ext5 -> AltPart3
-                  id = Ext1 -> Eid1 + Ext2 -> Eid2 + Ext3 -> Eid3 + Ext4 -> Eid4 + Ext5 -> Eid5 }
-fact flows { flow =
-                    /*basic flows*/
-                    Flow1 -> 0 -> Complete1 + 
-                    Flow1 -> 1 -> Query1 + 
-                    Flow1 -> 2 -> IncludePerformTransaction +
-                    Flow1 -> 3 -> SystemAsksForMoreOps +
-                    Flow1 -> 4 -> DecisionBlock1 +
-                    Flow1 -> 5 -> Internal1 +
-                    Flow1 -> 6 -> Success +
-
-                    Flow2 -> 0 -> Query2 +
-                    Flow2 -> 1 -> Internal2 +
-
-                    Flow3 -> 0 -> Query3 +
-                    Flow3 -> 1 -> Query4 +
-                    Flow3 -> 2 -> Internal3 +
-
-                    Flow4 -> 0 -> Query5 +
-                    Flow4 -> 1 -> Internal4 +
-
-                    /*alt flows*/
-                    Exception1 -> 0 -> SystemEjectsCard2 +
-                    Exception1 -> 1 -> SystemNotifiesCustomer +
-                    Exception1 -> 2 -> Failure1 +
-                    AltPart1 -> 0 -> CustomerEntersYes +
-                    AltPart1 -> 1 -> Goto6 +
-
-                    AltPart2 -> 0 -> SystemChecksFailedPINAttempts +
-                    AltPart2 -> 1 -> Goto4 +
-                    Exception2 -> 0 -> SystemRetainsCard +
-                    Exception2 -> 1 -> SystemNotifiesCustomer2 +
-                    Exception2 -> 2 -> Failure2 +
-
-                    AltPart3 -> 0 -> SystemNotifiesMoneyNA +
-                    AltPart3 -> 1 -> SystemRequestsSmallerAmount +
-                    AltPart3 -> 2 -> GotoW4
-}
-fact actionBlocks { actionSteps = Complete1 -> 0 -> CustomerInsertsCard + 
-                    Complete1 -> 1 -> SystemVerifiesCard +
-                    Complete1 -> 2 -> SystemReadsCard +
-                    Complete1 -> 3 -> SystemAsksPIN +
-                    Query1 -> 0 -> CustomerEntersPIN +
-                    Query1 -> 1 -> SystemRequestsOperation +
-                    DecisionBlock1 -> 0 -> CustomerWantsNoMoreOps +
-                    Internal1 -> 0 -> CustomerEntersNo +
-                    Internal1 -> 1 -> SystemEjectsCard +
-                    Internal1 -> 2 -> SystemTerminatesSession +
-
-                    Query2 -> 0 -> CustomerSelectsTransaction +
-                    Query2 -> 1 -> SystemRequestsDetails +
-                    Internal2 -> 0 -> CustomerEntersDetails +
-                    Internal2 -> 1 -> SystemApprovesTransaction +
-                    Internal2 -> 2 -> SystemPerformsAdequateSteps +
-                    Internal2 -> 3 -> SystemPrintsReceipt +
-
-                    Query3 -> 0 -> CustomerSelectsWithdraw +
-                    Query3 -> 1 -> SystemRequestsAccType +
-                    Query4 -> 0 -> CustomerSelectsAccType +
-                    Query4 -> 1 -> SystemRequestsAmount +
-                    Internal3 -> 0 -> CustomerEntersAmount +
-                    Internal3 -> 1 -> SystemChecksMoneyOnHand +
-                    Internal3 -> 2 -> SystemApprovesTransaction2 +
-                    Internal3 -> 3 -> SystemDispensesCash +
-                    Internal3 -> 4 -> SystemPrintsReceipt2 +
-
-                    Query5 -> 0 -> CustomerSelectsTransfer +
-                    Query5 -> 1 -> SystemRequestsAccsAndAmount +
-                    Internal4 -> 0 -> CustomerEntersAccsAndAmount +
-                    Internal4 -> 1 -> SystemApprovesTransaction3 +
-                    Internal4 -> 2 -> SystemPrintsReceipt3 
-}
-fact atoms { stepType = CustomerInsertsCard -> Input1 +
-               SystemVerifiesCard -> SC1 +
-               SystemReadsCard -> SR1 +
-               SystemAsksPIN -> Output1 +
-               CustomerEntersPIN -> Input2 +
-               SystemRequestsOperation -> Output2 +
-               SystemAsksForMoreOps -> Output3 +
-               CustomerWantsNoMoreOps -> UserChoice +
-               CustomerEntersNo -> Input3 +
-               SystemEjectsCard -> SR2 +
-               SystemTerminatesSession -> SR3 +
-
-               SystemEjectsCard2 -> SR4 +
-               SystemNotifiesCustomer -> Output4 +
-
-               CustomerEntersYes -> Input4 +
-
-               CustomerSelectsTransaction -> Input5 +
-               SystemRequestsDetails -> Output5 +
-               CustomerEntersDetails -> Input6 +
-               SystemApprovesTransaction -> SC2 +
-               SystemPerformsAdequateSteps -> SR5 +
-               SystemPrintsReceipt -> SR6 +
-
-               SystemChecksFailedPINAttempts -> SC3 +
-
-               SystemRetainsCard -> SR7 +
-               SystemNotifiesCustomer2 -> Output6 +
-
-                CustomerSelectsWithdraw -> Input7 +
-                SystemRequestsAccType -> Output7 +
-                CustomerSelectsAccType -> Input8 +
-                SystemRequestsAmount -> Output8 +
-                CustomerEntersAmount -> Input9 +
-                SystemChecksMoneyOnHand -> SC4 +
-                SystemApprovesTransaction2 -> SC5 +
-                SystemDispensesCash -> SR8 +
-                SystemPrintsReceipt2 -> SR9 +
-
-                SystemNotifiesMoneyNA -> Output9 +
-                SystemRequestsSmallerAmount -> Output10 +
-
-                CustomerSelectsTransfer -> Input10 +
-                SystemRequestsAccsAndAmount -> Output11 +
-                CustomerEntersAccsAndAmount -> Input11 +
-                SystemApprovesTransaction3 -> SC6 +
-                SystemPrintsReceipt3 -> SR10
-}
+fact alternatives { condition = Alt1 -> SystemCantReadCard + Alt2 -> CustomerWantsMoreOps + Alt3 -> OneOrTwoFailedPinAttempts + 
+                    Alt4 -> ThreeFailedPinAttempts + Alt5 -> NotEnoughMoneyOnHand
+                  type = Alt1 -> INTERNAL + Alt2 -> INTERNAL + Alt3 -> EXTERNAL + Alt4 -> INTERNAL + Alt5 -> INTERNAL
+                  alternativeScenario = Alt1 -> Exception1 + Alt2 -> AltPart1 + Alt3 -> InsertionFlow1 + Alt4 -> Exception2 +
+                      Alt5 -> AltPart2
+                  id = Alt1 -> Aid1 + Alt2 -> Aid2 + Alt3 -> Aid3 + Alt4 -> Aid4 + Alt5 -> Aid5 }
+/*fact flows { flow =*/
+/*                    --basic flows*/
+/*                    Flow1 -> 0 -> Complete1 + */
+/*                    Flow1 -> 1 -> IncludePerformTransaction +*/
+/*                    Flow1 -> 2 -> Internal1 +*/
+/*                    Flow1 -> 3 -> Success +*/
+/**/
+/*                    --insertion flows*/
+/*                    InsertionFlow1 -> 0 -> SystemRequestsPinAgain +*/
+/*                    InsertionFlow1 -> 1 -> Validation1 +*/
+/*                    InsertionFlow1 -> 2 -> Resume +*/
+/**/
+/*                    InsertionFlow2 -> 0 -> Query1 +*/
+/*                    InsertionFlow2 -> 1 -> Query2 +*/
+/*                    InsertionFlow2 -> 2 -> Internal2 +*/
+/*                    InsertionFlow2 -> 3 -> Resume +*/
+/**/
+/*                    InsertionFlow3 -> 0 -> Query3 +*/
+/*                    InsertionFlow3 -> 1 -> Internal3 +*/
+/*                    InsertionFlow3 -> 2 -> Resume +*/
+/*                    */
+/*                    InsertionFlow4 -> 0 -> Query4 +*/
+/*                    InsertionFlow4 -> 1 -> Internal3 +*/
+/*                    InsertionFlow4 -> 2 -> Resume +*/
+/**/
+/*                    --alt flows*/
+/*                    Exception1 -> 0 -> SystemEjectsCard2 +*/
+/*                    Exception1 -> 1 -> SystemNotifiesCustomer +*/
+/*                    Exception1 -> 2 -> Failure +*/
+/**/
+/*                    AltPart1 -> 0 -> CustomerEntersYes +*/
+/*                    AltPart1 -> 1 -> SystemRequestsTransaction +*/
+/*                    AltPart1 -> 2 -> Goto5 +*/
+/**/
+/*                    Exception2 -> 0 -> SystemRetainsCard +*/
+/*                    Exception2 -> 1 -> SystemNotifiesCustomer2 +*/
+/*                    Exception2 -> 2 -> SystemTerminatesSession2 +*/
+/*                    Exception2 -> 3 -> Failure*/
+/*}*/
+/*fact actionBlocks { actionSteps = Complete1 -> 0 -> CustomerInsertsCard + */
+/*                    Complete1 -> 1 -> SystemVerifiesCard +*/
+/*                    Complete1 -> 2 -> SystemReadsCard +*/
+/*                    Complete1 -> 3 -> SystemAsksPIN +*/
+/*                    Internal1 -> 0 -> CustomerEntersNo +*/
+/*                    Internal1 -> 1 -> SystemEjectsCard +*/
+/*                    Internal1 -> 2 -> SystemTerminatesSession +*/
+/**/
+/*                    Query1 -> 0 -> CustomerSelectsWithdraw +*/
+/*                    Query1 -> 1 -> SystemRequestsAccType +*/
+/*                    Query2 -> 0 -> CustomerSelectsAccType +*/
+/*                    Query2 -> 1 -> SystemRequestsAmount +*/
+/*                    Internal2 -> 0 -> CustomerEntersAmount +*/
+/*                    Internal2 -> 1 -> SystemChecksMoneyOnHand +*/
+/*                    Internal2 -> 2 -> SystemChecksPIN1 +*/
+/*                    Internal2 -> 3 -> SystemDispensesCash +*/
+/*                    Internal2 -> 4 -> SystemPrintsReceipt2 +*/
+/*                    Internal2 -> 5 -> SystemAsksForMoreTr +*/
+/**/
+/*                    Query3 -> 0 -> CustomerSelectsTransfer +*/
+/*                    Query3 -> 1 -> SystemRequestsAccsAndAmount +*/
+/*                    Internal3 -> 0 -> CustomerEntersAccsAndAmount +*/
+/*                    Internal3 -> 1 -> SystemChecksPIN2 +*/
+/*                    Internal3 -> 2 -> SystemPrintsReceipt3 +*/
+/*                    Internal3 -> 3 -> SystemAsksForMoreTr2 +*/
+/**/
+/*                    Query4 -> 0 -> CustomerInsertsPin +*/
+/*                    Query4 -> 1 -> SystemRequestsTransaction */
+/*}*/
+/*fact atoms { stepType = CustomerInsertsCard -> Input +*/
+/*               SystemVerifiesCard -> SystemValidation1 +*/
+/*               SystemReadsCard -> SystemR +*/
+/*               SystemAsksPIN -> Output +*/
+/*               CustomerEntersNo -> UserDecision1 +*/
+/*               SystemEjectsCard -> SystemR +*/
+/*               SystemTerminatesSession -> SystemR +*/
+/**/
+/*               SystemEjectsCard2 -> SystemR +*/
+/*               SystemNotifiesCustomer -> Output +*/
+/**/
+/*               CustomerEntersYes -> Input +*/
+/**/
+/*               SystemRequestsPinAgain -> Output +*/
+/*               CustomerReentersPin -> Input +*/
+/*               SystemValidatesPin -> SystemValidation2 +*/
+/**/
+/*               SystemRetainsCard -> SystemR +*/
+/*               SystemNotifiesCustomer2 -> Output +*/
+/*               SystemTerminatesSession2 -> SystemR +*/
+/**/
+/*                CustomerSelectsWithdraw -> Input +*/
+/*                SystemRequestsAccType -> Output +*/
+/*                CustomerSelectsAccType -> Input +*/
+/*                SystemRequestsAmount -> Output +*/
+/*                CustomerEntersAmount -> Input +*/
+/*                SystemChecksMoneyOnHand -> SystemValidation3 +*/
+/*                SystemChecksPIN1 -> SystemValidation4 +*/
+/*                SystemDispensesCash -> SystemR +*/
+/*                SystemPrintsReceipt2 -> SystemR +*/
+/*                SystemAsksForMoreTr -> Output +*/
+/**/
+/*                SystemNotifiesMoneyNA -> Output +*/
+/*                SystemRequestsSmallerAmount -> Output +*/
+/**/
+/*                CustomerSelectsTransfer -> Input +*/
+/*                SystemRequestsAccsAndAmount -> Output +*/
+/*                CustomerEntersAccsAndAmount -> Input +*/
+/*                SystemChecksPIN2 -> SystemValidation5 +*/
+/*                SystemPrintsReceipt3 -> SystemR*/
+/*                SystemAsksForMoreTr2 -> Output +*/
+/*}*/
 fact steps { stepID = CustomerInsertsCard -> Sid1 + SystemVerifiesCard -> Sid2 + SystemReadsCard -> Sid3 +
-            SystemAsksPIN -> Sid4 + CustomerEntersPIN -> Sid5 + SystemRequestsOperation -> Sid6 +
-            SystemAsksForMoreOps -> Sid7 + CustomerWantsNoMoreOps -> Sid8 + CustomerEntersNo -> Sid9 +
-            SystemEjectsCard -> Sid10 + SystemTerminatesSession -> Sid11 + SystemEjectsCard2 -> Sid12 +
-            SystemNotifiesCustomer -> Sid13 + CustomerEntersYes -> Sid14 + Success1 -> Sid15 +
-            Goto6 -> Sid16 + Failure1 -> Sid17 + IncludePerformTransaction -> Sid18 +
+            SystemAsksPIN -> Sid4 + CustomerEntersNo -> Sid5 + SystemEjectsCard -> Sid6 + SystemTerminatesSession -> Sid7 
+            + SystemEjectsCard2 -> Sid8 + SystemNotifiesCustomer -> Sid9 + CustomerEntersYes -> Sid10 + 
+            SystemRequestsTransaction -> Sid11 + Goto5 -> Sid12 + IncludePerformTransaction -> Sid13 +
                         
-            CustomerSelectsTransaction -> Sid19 + SystemRequestsDetails -> Sid20 + CustomerEntersDetails -> Sid21 +
-            SystemApprovesTransaction -> Sid22 + SystemPerformsAdequateSteps -> Sid23 + SystemPrintsReceipt -> Sid24 +
+            SystemRequestsPinAgain -> Sid14 + CustomerReentersPin -> Sid15 + SystemValidatesPin -> Sid16 + 
+            SystemRetainsCard -> Sid17 + SystemNotifiesCustomer2 -> Sid18 + SystemTerminatesSession2 -> Sid19 +
 
-            SystemChecksFailedPINAttempts -> Sid25 + Goto4 -> Sid26 + SystemRetainsCard -> Sid27 + SystemNotifiesCustomer2 -> Sid28 +
-            Failure2 -> Sid29 +
+            CustomerSelectsWithdraw -> Sid20 + SystemRequestsAccType -> Sid21 + CustomerSelectsAccType -> Sid22 +
+            SystemRequestsAmount -> Sid23 + CustomerEntersAmount -> Sid24 + SystemChecksMoneyOnHand -> Sid25 +
+            SystemChecksPIN1 -> Sid26 + SystemDispensesCash -> Sid27 + SystemPrintsReceipt2 -> Sid28 + 
+            SystemNotifiesMoneyNA -> Sid29 + SystemRequestsSmallerAmount -> Sid30 + Goto6 -> Sid31 + IncludeInsertPIN -> Sid32 +
 
-            CustomerSelectsWithdraw -> Sid30 + SystemRequestsAccType -> Sid31 + CustomerSelectsAccType -> Sid32 +
-            SystemRequestsAmount -> Sid33 + CustomerEntersAmount -> Sid34 + SystemChecksMoneyOnHand -> Sid35 +
-            SystemApprovesTransaction2 -> Sid36 + SystemDispensesCash -> Sid37 + SystemPrintsReceipt2 -> Sid38 + 
-            SystemNotifiesMoneyNA -> Sid39 + SystemRequestsSmallerAmount -> Sid40 + GotoW4 -> Sid41 + 
+            CustomerSelectsTransfer -> Sid33 + SystemRequestsAccsAndAmount -> Sid34 + CustomerEntersAccsAndAmount -> Sid35 +
+            SystemChecksPIN2 -> Sid36 + SystemPrintsReceipt3 -> Sid37 + IncludeInsertPIN2 -> Sid38 +
 
-            CustomerSelectsTransfer -> Sid42 + SystemRequestsAccsAndAmount -> Sid43 + CustomerEntersAccsAndAmount -> Sid44 +
-            SystemApprovesTransaction3 -> Sid45 + SystemPrintsReceipt3 -> Sid46
+            CustomerInsertsPin -> Sid39 + SystemRequestsTransaction2 -> Sid40 + Success -> Sid41 + Failure -> Sid42 + Resume -> Sid43 +
+            SystemAsksForMoreTr -> Sid44 + SystemAsksForMoreTr2 -> Sid45
 }
-fact gotos { otherStepID = Goto6 -> Sid6 + Goto4 -> Sid4 + GotoW4 -> Sid33 }
-fact choices { Choice <: extensions = SC1 -> Eid1 + UC1 -> Eid2 + SC2 -> Eid3 + SC3 -> Eid4 + SC4 -> Eid5 + SC5 -> Eid3 + SC6 -> Eid3 }
-fact includes { ucName = IncludePerformTransaction -> Name2 }
+fact gotos { otherStepID = Goto5 -> Sid13 + Goto6 -> Sid24 }
+fact choices { Choice <: alternatives = SystemValidation1 -> Aid1 + UserDecision1 -> Aid2 + SystemValidation2 -> Aid4 + 
+                                        SystemValidation3 -> Aid5 + SystemValidation4 -> Aid3 + SystemValidation5 -> Aid3 }
+fact includes { ucName = IncludePerformTransaction -> Name2 + IncludeInsertPIN -> Name6 + IncludeInsertPIN2 -> Name6 }

@@ -1,185 +1,17 @@
 module textualUseCase
 
-/*
-* Adaptado de 'LTS Semantics for Use Case Models', por Daniel Sinnig
-*/
-
 open util/relation as rel
 open util/ternary as ter
 
-// Fig. 1
-/* Goal Level Properties */
-/*abstract sig GoalLvlProp{}*/
-/*sig Summary extends GoalLvlProp{}*/
-/*sig UserGoal extends GoalLvlProp{}*/
-/*sig SubFunction extends GoalLvlProp{}*/
-/* ************************************ */
-/* Step Types */
-/*abstract sig StepType{}*/
-/*sig System extends StepType{}*/
-/*sig Interaction extends StepType{}*/
-/*sig Internal extends StepType{}*/
-abstract sig ActionStep {}
-sig Input extends ActionStep {}
-sig Output extends ActionStep {}
-sig SystemR extends ActionStep {}
-/*abstract sig Assume extends ActionStep {}*/
-abstract sig Choice extends ActionStep {
-    extensions: some ExtensionID
-} {
-    extensions not in this.~stepType.~(select13[actionSteps]).~(select13[flow]).~extensionScenario.id 
-}
-sig UserChoice extends Choice {}
-sig SystemCheck extends Choice {}
-/* ************************************ */
-/* Use Case Properties */
-/*sig UCProperties{*/
-	/*goal: one GoalProperty,*/
-	/*primaryActor: one ActorProperty,*/
-	/*goalLevel: one GoalLvlProp,*/
-	/*precondition: one PrecondProperty*/
-/*}*/
-//fact { bijective[goalLevel, GoalLvlProp] }
-
-/*sig GoalProperty{}*/
-/*sig ActorProperty{}*/
-/*sig PrecondProperty{}*/
-abstract sig Actor {
-    inheritsFrom: lone Actor    
-} {
-    this in UseCaseModel.actors    
-}
-// a relação de herança entre actores é acíclica
-fact  { acyclic[Actor<:inheritsFrom, Actor] }
-abstract sig User, ComputerSystem extends Actor {}
-// humanos e máquinas não herdam uns dos outros
-/*fact { all u: User, s: ComputerSystem | u not in s.inheritsFrom and s not in u.inheritsFrom }*/
-/* ************************************ */
-/* Kinds of Steps */
-abstract sig Step{ stepID: one StepID } { 
-    // para não haver Steps soltos
-    this in /*Choice.alternatives[univ] + (retirados os passos Choice)*/
-            /*Concurrent.steps +*/
-            Flow.flow[univ] + ActionBlock.actionSteps[univ]
-    // um Step só pode aparecer uma vez num flow e apenas num único flow
-    lone flow.this
-}
-fact { bijective[stepID, StepID] } //Def. 1.1 os id's são únicos. Def. 1.2 não há StepID's sem um Step
-/* Atom */
-abstract sig Atom extends Step{
-	stepType: one ActionStep,
-	label: one Label,
-	/*extensions: set ExtensionID*/
-} {
-	/*stepType not in Assume => #extensions = 0*/
-    // cada Atom tem uma label diferente
-    --no disj a,a': Atom | a.@label in a'.@label
-    // se um Atom pertence a um Flow então não pertence a nenhum actionSteps de AB's (e vice-versa)
-    this in Flow.flow[univ] => this not in ActionBlock.actionSteps[univ]
-}
-fact { bijective[stepType,ActionStep] }
-
-abstract sig StepID{}
-sig Label{}{ Label in Atom.label }
-abstract sig ExtensionID{}
-/* Choice */
-/*abstract sig Choice extends Step{*/
-/*	alternatives: set (seq Step),*/
-/*	extensions: set ExtensionID*/
-/*}*/
-/* Concurrent */
-/*abstract sig Concurrent extends Step{*/
-/*	steps: set (set Step),*/
-/*	extensions: set ExtensionID*/
-/*}*/
-/* Goto */
-abstract sig Goto extends Step{
-	otherStepID: one StepID
-} {
-    // o StepID referenciado pelo otherStepID de cada Goto só pode pertencer a passos que estejam contidos no fluxo que a extensão à qual esse Goto 
-    // pertence extende, ou seja, os Goto só podem apontar para o fluxo pai (mas nunca para outros Goto, Failure ou Success; não faz sentido).
-   /*let passosDoPai = this.~(select13[flow]).~extensionScenario.~extensions.mainScenario.flow.actionSteps[univ][univ] {*/
-    /*    otherStepID in passosDoPai.@stepID - Goto.@stepID - Failure.@stepID - Success.@stepID*/
-    /*}*/
-}
-fact gotoNaoCiclicos { Goto.otherStepID & Goto.stepID = none }
-/* Include */
-abstract sig Include extends Step{
-	ucName: one UCName
-} {
-    Include in univ.(UseCase.extensions.extensionScenario.flow + UseCase.mainScenario.flow)    
-}
-fact { ran[ucName] in mid[useCases] } //Def. 1.3 a)
-fact { acyclic[inclui, UseCase] } // Def. 1.3 não há inclusoes ciclicas 
-abstract sig UCName{}
-/* Success and Failure */
-abstract sig Success extends Step{ }
-abstract sig Failure extends Step{ }
-/* ************************************ */
-/* Extensions */
-abstract sig Extension {
-	id: ExtensionID,
-	condition: one Condition,
-	extensionScenario: AltFlow,
-    type: one ExtensionType
-} {
-	// pra não haver extensions soltos
-	Extension in univ.extensions
-    // se a extensão for externa então o AltFlow está contido noutro UC
-    type in EXTERNAL => extensionScenario in UseCase.mainScenario
-}
-enum ExtensionType { INTERNAL, EXTERNAL }
-
-
-// cada extensão tem a sua condição e o seu altFlow
-fact { all disj e,e': Extension | e.condition not in e'.condition && e.extensionScenario not in e'.extensionScenario }
-fact { bijective[id, ExtensionID] } // Def. 1.1 os id's são únicos. 
-											   //Def. 1.2 não há ExtensionID's sem um Extension
-abstract sig Condition{}{
-    Condition in Extension.condition    
-}
-/* ************************************ */
-/* Use Case */
-abstract sig UseCase {
-	name: UCName,
-	/*properties: one UCProperties,*/
-    goalLevel: one GoalLevel,
-	mainScenario: one Flow,
-	extensions: set Extension,
-    inheritsFrom: set UseCase
-}{
-	// o conj de extensions (alt flows) de um UC é igual ao conj de
-	// extension dos seus passos
-	extensions = { e: Extension | 
-		e.id in (mainScenario.flow.stepType[univ]).extensions +
-        (ActionBlock <: mainScenario.flow[univ]).actionSteps[univ].(stepType.extensions)}
-    // todos os UseCase têm de pertencer a algum UseCaseModel
-    UseCase in UseCaseModel.useCases[univ]
-    // se o UC for USERGOAL, o mainScenario é um BasicFlow, senão é um AltFlow
-    /*goalLevel in USERGOAL => mainScenario in BasicFlow else mainScenario in AltFlow*/
-    // todos os UC têm de ser 'usados' por um Actor, extender um UC, ser íncluido por um UC, ou herdar de um UC
-    this in UseCaseModel.use[Actor] + extende.UseCase + inclui[UseCase] + @inheritsFrom.UseCase
-    // o mainScenario de um UC não pode ser o mesmo de uma das suas extensões
-    mainScenario not in extensions.extensionScenario
-}
-
-fact extensoesAciclicas { acyclic[extende, UseCase] and
-                            all u,u':UseCase | u' in u.^inclui => u' not in u.extende }
-
-enum GoalLevel { USERGOAL, SUBFUNCTION }
-// inheritsFrom é assimétrico, irrflexivo e aciclico
-fact { acyclic[UseCase <: inheritsFrom, UseCase]}
-fact { bijective[name, UCName] }
-
-/* ************************************ */
-/* Use Case Model (Def.1) */
-abstract sig UseCaseModel {
-	rootUCName: one UCName,
+/* Use Case Model */
+abstract one sig UseCaseModel {
+	/*rootUCName: one UCName,*/
 	useCases: UCName -> UseCase,
     actors: some Actor,
     use: Actor set -> some UseCase,
 }{
-	rootUCName in dom[useCases]
+	/*rootUCName in dom[useCases]*/
+    // para todos os pares (UCName, UseCase) na relação useCases, o UCName é o nome do UseCase associado
 	all n: UCName, u: UseCase | n -> u in useCases => n in u.name
     // a use case can not be associated with two actors related with inheritsFrom
     all u: UCName.useCases, disj a, a': use.u | a not in a'.^(Actor<:inheritsFrom)
@@ -188,104 +20,296 @@ abstract sig UseCaseModel {
     // an actor cannot be associated with two use cases related with inheritsFrom 
     all a: actors, disj u, u': use[a] | u not in u'.^inheritsFrom
     // um actor só pode 'usar' UC's de nível USERGOAL
-    all uc: use[univ] | uc.goalLevel in USERGOAL
+    all uc: use[Actor] | uc.goalLevel in USERGOAL
+}
+/* ************************************ */
+/* Actores */
+abstract sig Actor {
+    inheritsFrom: lone Actor    
+} {
+    // todos os actores existentes pertencem ao UseCaseModel
+    this in UseCaseModel.actors    
+}
+abstract sig User, ComputerSystem extends Actor {}
+
+// a relação de herança entre actores é acíclica
+fact  { acyclic[Actor<:inheritsFrom, Actor] }
+// humanos e máquinas não herdam uns dos outros
+fact { all u: User, s: ComputerSystem | u not in s.inheritsFrom and s not in u.inheritsFrom }
+/* ************************************ */
+/* Use Case */
+abstract sig UseCase {
+	name: one UCName,
+    goalLevel: one GoalLevel,
+	mainScenario: one Flow,
+	alternatives: set Alternative,
+    inheritsFrom: set UseCase
+}{
+	// o conj de alternativas de um UC é igual ao conj de
+	// alternativas dos seus passos
+	alternatives = { a: Alternative | 
+		a.id in (mainScenario.flow.stepType[Int]).alternatives +
+        (ActionBlock <: mainScenario.flow[Int]).actionSteps[Int].(stepType.alternatives)}
+    // todos os UseCase têm de pertencer ao UseCaseModel
+    this in UseCaseModel.useCases[UCName]
+    // o mainScenario dos UC 'usados' pelo Actor,
+    // é um BasicFlow ou um EmptyFlow (no caso do uc ser abstracto)
+    this in UseCaseModel.use[Actor] => mainScenario in BasicFlow + EmptyFlow
+    // os use cases utilizados pelo actores são do tipo USERGOAL
+    this in UseCaseModel.use[Actor] => goalLevel in USERGOAL
+    // os use cases de especialização têm o mesmo tipo do use case que especializam
+    some inheritsFrom => goalLevel in inheritsFrom.@goalLevel
+    // todos os UC têm de ser 'usados' por um Actor, extender um UC, ser íncluido por um UC, ou herdar de um UC
+    this in UseCaseModel.use[Actor] + extende.UseCase + inclui[UseCase] + @inheritsFrom.UseCase
+    // o mainScenario de um UC não pode ser o mesmo de uma das suas alternativas
+    mainScenario not in alternatives.alternativeScenario
+    // não existe herança múltipla entre UCs
+    lone inheritsFrom
+    // o fluxo de UCs abstractos é vazio (e o dos concretos não
+    this in abstractUseCases => mainScenario in EmptyFlow /*else mainScenario not in EmptyFlow*/
+    // UCs incluídos não podem ser 'usados' directamente (?)
+    this in UseCase.inclui => this not in UseCaseModel.use[Actor]
+    // UCs incluídos são do tipo SUBFUNCTION 
+    this in UseCase.inclui => goalLevel in SUBFUNCTION
+    // Fluxos de alternativa como AltHistory, ou UCException só podem ser caminho principal de UCs de extensão
+    // (não podem ser AltPart)
+    mainScenario in AltHistory + UCException => this in extende.UseCase
 }
 
+fact extensoesAciclicas { acyclic[extende, UseCase] and
+                            all u,u':UseCase | u' in u.^inclui => u' not in u.extende }
+
+enum GoalLevel { USERGOAL, SUBFUNCTION }
+// inheritsFrom é assimétrico, irreflexivo e acíclico
+fact { acyclic[UseCase <: inheritsFrom, UseCase]}
+fact { bijective[name, UCName] }
+
 /* ************************************ */
+/* Fluxos */
+abstract sig Flow { 
+	flow: seq Step + ActionBlock
+} { 
+	// os passos Goto, Success, Failure, e Resume não podem pertence ao corpo de um UC, são apenas o último passo
+	all s: Goto + Success + Failure + Resume | s not in Int.(butlast[flow])
+	// para não haver flows soltos
+	this in Alternative.alternativeScenario + UseCase.mainScenario
+    // cada Flow está ligado, no máximo, a um mainScenario
+    this not in EmptyFlow => lone this.~mainScenario 
+    // se um Flow estiver ligado a um mainScenario e a algum alternativeScenario, isso significa que pertence
+    // a um UseCase de extensão
+    this in UseCase.mainScenario and this in Alternative.alternativeScenario => this.~alternativeScenario.type in EXTERNAL
+} 
+abstract sig AltFlow extends Flow {} {
+	// os alt flows têm de ter pelo menos dois passos
+	#flow > 1
+}
+abstract sig AltPart     extends AltFlow {} { last[flow] in Goto    }
+abstract sig AltHistory  extends AltFlow {} { last[flow] in Success }
+abstract sig UCException extends AltFlow {} { 
+    last[flow] in Failure
+    // a partir do momento em que se entra numa UCException, não é possível recuperar e entrar num fluxo que resulte em sucesso, ou seja,
+    // alternativas com origem em UCException's, não podem ser do tipo AltHistory
+    flow.stepType.alternatives.~id.alternativeScenario[Int] not in AltHistory and
+        flow.actionSteps.stepType.alternatives.~id.alternativeScenario[Int][Int] not in AltHistory
+}
+
+abstract sig BasicFlow extends Flow {} {
+    // os fluxos básicos de uc's de nivel USERGOAL terminam sempre em sucesso
+    this.~mainScenario.goalLevel in USERGOAL => last[flow] in Success    
+    // excepto o passo de Success, o corpo de BasicFlows é composto só por ActionBlocks e, eventualmente, passos Include
+    Int.(butlast[flow]) in ActionBlock + Include
+	// os basic flows têm de ter pelo menos dois passos
+	#flow > 1
+}
+
+one sig EmptyFlow extends Flow{} {
+    // este tipo de Flow só pode fazer parte de use cases abstractos
+    this in abstractUseCases.mainScenario
+	// os emtpy flows não contêm qualquer passo
+	#flow = 0
+}
+abstract sig InsertionFlow extends Flow {} { 
+    last[flow] in Resume
+    // este tipo de fluxo apenas diz respeito a UCs de extensão ou inclusão
+    this in extende.UseCase.mainScenario + UseCase.inclui.mainScenario
+    #flow > 1
+}
+/* ************************************ */
+/* Alternatives */
+abstract sig Alternative {
+	id: one AlternativeID,
+	condition: one Condition,
+	alternativeScenario: one AltFlow + InsertionFlow,
+    type: one AlternativeType
+} {
+	// pra não haver alternatives soltos
+	this in UseCase.alternatives
+    // se a extensão for externa então o AltFlow está contido noutro UC
+    type in EXTERNAL => alternativeScenario in UseCase.mainScenario
+    // se a alternativa corresponder a um UC de extensão, o seu fluxo só pode ser um AltHistory, UCException, ou InsertionFlow.
+    // de modo a evitar Goto's perigosos, ou seja, que apontem para passos de outros UC
+    type in EXTERNAL => alternativeScenario in AltHistory+UCException+InsertionFlow
+    // as alternativas correspondentes a passos do tipo UserDecision são iniciadas por um passo do tipo Input
+    (some c : id.~alternatives | c in UserDecision) => first[alternativeScenario.flow].stepType in Input
+    // as alternativas correspondentes a passos do tipo SystemValidation são iniciadas por um passo do tipo SystemR ou Output
+    (some c : id.~alternatives | c in SystemValidation) => first[alternativeScenario.flow].stepType in SystemR + Output
+}
+enum AlternativeType { INTERNAL, EXTERNAL }
+
+// cada alternativa tem a sua condição e o seu fluxo
+fact { all disj a,a': Alternative | a.condition not in a'.condition && a.alternativeScenario not in a'.alternativeScenario }
+fact { bijective[id, AlternativeID] } 
+											  
+abstract sig Condition{}{
+    this in Alternative.condition    
+}
+/* ************************************ */
+/* Action Blocks */
 abstract sig ActionBlock {
 	actionSteps: seq Atom
 } {
-	// os action blocks não podem estar vazios
-	#actionSteps > 0
+	// o ActionBlock mais pequeno possivel tem dois actionSteps (um query, input-output)
+	#actionSteps > 1
 	// o 1º passo dos AB é sempre um Input
-	this not in DecisionBlock => first[actionSteps].stepType in Input
+	first[actionSteps].stepType in Input + UserDecision
 	// e é so o 1º, nunca aparece no corpo restante de um AB
-	Input not in univ.(rest[actionSteps]).stepType
+	Input not in Int.(rest[actionSteps]).stepType
 	// o Output, se aparecer, é sempre na última posição de um AB
-	Output not in univ.(butlast[actionSteps]).stepType
+	/*Output not in Int.(butlast[actionSteps]).stepType*/
 	// os actionsBlocks tem de estar ligados a Flow's
-	all ab: ActionBlock | some f: Flow | ab in f.flow[univ]
+	some f: Flow | this in f.flow[Int]
     // cada AB só pode aparecer uma vez num Flow e apenas num único Flow
     lone flow.this
 }
 
 abstract sig Query extends ActionBlock {
-	
 } {
+    // o último passo de um Query é um Output
 	last[actionSteps].stepType in Output
-	// os passos intermédios só podem ser Assume's
-	SystemR not in univ.actionSteps.stepType
+	// os passos intermédios só podem ser Choice
+	SystemR not in Int.actionSteps.stepType
 }
 
-abstract sig Internal extends ActionBlock {
-	
+abstract sig Internal extends ActionBlock {	
 } {
-	Output not in univ.actionSteps.stepType
-	some s: SystemR | s in univ.actionSteps.stepType
+    // os ActionBlock Internal não contêm passos Output
+	Output not in Int.actionSteps.stepType
+    // e contêm, obrigatoriamente, pelo menos um passo SystemResponsability
+	some s: SystemR | s in Int.actionSteps.stepType
 }
 
-abstract sig Service extends ActionBlock {
-	
+abstract sig Service extends ActionBlock {	
 } {
+    // o último passo de um Service é um Output
 	last[actionSteps].stepType in Output
-	Choice not in univ.actionSteps.stepType
-	some s: SystemR | s in univ.actionSteps.stepType
+    // os ActionBlock Service não contêm passos do tipo Choice
+	Choice not in Int.actionSteps.stepType
+    // e contêm, também, pelo menos um passo SystemResponsability
+	some s: SystemR | s in Int.actionSteps.stepType
 }
 
-abstract sig Validation extends ActionBlock {
-	
+abstract sig Validation extends ActionBlock {	
 } {
-	some c: SystemCheck | c in univ.actionSteps.stepType
-	SystemR not in univ.actionSteps.stepType
-	Output not in univ.actionSteps.stepType
+    // os ActionBlock Validation contêm pelo menos um passo SystemValidation
+	some v: SystemValidation | v in Int.actionSteps.stepType
+    // não contêm nenhum SystemResponsability
+	SystemR not in Int.actionSteps.stepType
+    // nem nenhum Output
+	Output not in Int.actionSteps.stepType
 }
 
-abstract sig Complete extends ActionBlock {
-	
+abstract sig Complete extends ActionBlock {	
 } {
+    // o último passo dos ActionBlock do tipo Complete é um Output
 	last[actionSteps].stepType in Output
-	some c: Choice | c in univ.actionSteps.stepType
-	some s: SystemR | s in univ.actionSteps.stepType
+    // contêm obrigatoriamente algum passo SystemValidation ou SystemVerification
+	some v: SystemValidation /*+ SystemVerification*/ | v in Int.actionSteps.stepType
+    // e também algum passo SystemResponsability
+	some s: SystemR | s in Int.actionSteps.stepType
 }
-
-abstract sig DecisionBlock extends ActionBlock {} {
-    // em todos os DecisionBlock há um passo Choice; e é o único passo.
-    one c: Choice | c in actionSteps.stepType[univ] && #actionSteps = 1
-}
-
 /* ************************************ */
-/* Helper Signatures */
-abstract sig Flow { 
-	flow: seq Step + ActionBlock
-} { 
-	// os passos Goto, Success e Failure não podem pertence ao corpo de um UC, são apenas o último passo
-	all s: Goto + Success + Failure | s not in univ.(butlast[flow])
-	// pra n haver flows soltos
-	Flow in Extension.extensionScenario + UseCase.mainScenario
-	// os flows têm de ter pelo menos dois passos (discutivel)
-	#flow > 1
-    // cada Flow está ligado, no máximo, a um mainScenario
-    lone this.~mainScenario
-} 
-abstract sig AltFlow extends Flow {} {}
-abstract sig AltPart     extends AltFlow {} { last[flow] in Goto    }
-abstract sig AltHistory  extends AltFlow {} { last[flow] in Success }
-abstract sig UCException extends AltFlow {} { last[flow] in Failure }
-
-abstract sig BasicFlow extends Flow {} {
-    // os fluxos básicos de uc's de nivel USERGOAL terminam sempre em sucesso
-    /*this.~mainScenario.goalLevel in USERGOAL => last[flow] in Success    */
-    // excepto o passo de Success, o corpo de basic flows é composto so por AB's
-    /*Int.(butlast[flow]) in ActionBlock*/
+/* Kinds of Steps */
+abstract sig Step{ stepID: one StepID } { 
+    // para não haver Steps soltos
+    this in Flow.flow[Int] + ActionBlock.actionSteps[Int]
+    // um Step só pode aparecer uma vez num flow e apenas num único flow
+    /*lone flow.this*/
 }
-/*fact { all s:Step | s in univ.(univ.flow) } //para não haver Step's fora de Flows*/
+
+fact { bijective[stepID, StepID] }
+
+/* Atom */
+abstract sig Atom extends Step{
+	stepType: one ActionStep,
+	/*label: one Label,*/
+} {
+    // cada Atom tem uma label diferente
+    --no disj a,a': Atom | a.@label in a'.@label
+    // cada Atom é mapeado uma única vez ou pela relação actionSteps ou pela relação flow
+    one this.~(select13[actionSteps] + select13[flow])
+}
+
+abstract sig StepID{}
+/*sig Label{}{ Label in Atom.label }*/
+abstract sig AlternativeID{}
+/* Goto */
+abstract sig Goto extends Step{
+	otherStepID: one StepID
+} {
+    // o StepID referenciado pelo otherStepID de cada Goto só pode pertencer a passos que estejam contidos no fluxo que a extensão à qual esse Goto 
+    // pertence extende, ou seja, os Goto só podem apontar para o fluxo pai (mas nunca para outros Goto, Failure ou Success; não faz sentido).
+   let flowDoPai = this.~(select13[flow]).~alternativeScenario.~alternatives.mainScenario.flow[Int] {
+        otherStepID in (flowDoPai.@stepID + (flowDoPai.actionSteps[Int]).@stepID) - Goto.@stepID - Failure.@stepID - Success.@stepID
+    }
+}
+
+/* Include */
+abstract sig Include extends Step{
+	ucName: one UCName
+} {
+    this in Int.(UseCase.alternatives.alternativeScenario.flow + UseCase.mainScenario.flow)    
+}
+fact { ran[ucName] in mid[useCases] } 
+// não há inclusões cíclicas
+fact { acyclic[inclui, UseCase] } 
+
+abstract sig UCName{}
+/* Success and Failure */
+lone sig Success extends Step{ }
+lone sig Failure extends Step{ }
+
+lone sig Resume extends Step {} { this in InsertionFlow.flow[Int] }
+/* ************************************ */
+/* Action Steps */
+abstract sig ActionStep {}
+lone sig Input extends ActionStep {}
+lone sig Output extends ActionStep {}
+lone sig SystemR extends ActionStep {}
+abstract sig Choice extends ActionStep {
+    alternatives: some AlternativeID
+} {
+    // se um Choice pertencer a uma alternativa, o id da alternativa não pode estar contido
+    // no conjunto de id's para o qual esse Choice aponta
+    some a: Alternative | (this in a.alternativeScenario.flow.stepType[Int] or
+                          this in a.alternativeScenario.flow.actionSteps.stepType[Int][Int])
+                => a.id not in alternatives
+    // os passos Choice são únicos, e não pode haver dois Atoms para um dado Choice (ao contrário dos outros ActionSteps)
+    one this.~stepType
+}
+abstract sig UserDecision extends Choice {}
+abstract sig SystemValidation extends Choice {}
+/*one sig SystemVerification extends Choice {}*/
 /* ************************************ */
 /* Helper Functions */
 fun inclui : UseCase -> UseCase { 
-	{ uc1,uc2 : UseCase | uc2 in name.(uc1.mainScenario.flow.ucName[univ]) }
+	{ uc1,uc2 : UseCase | uc2 in name.(uc1.mainScenario.flow.ucName[Int]) or
+                          uc2 in name.(uc1.alternatives.alternativeScenario.flow.ucName[Int]) or
+                          (some uc3: UseCase | uc3 in uc2.^inheritsFrom and uc3 in name.(uc1.mainScenario.flow.ucName[Int]) ) or
+                          (some uc3: UseCase | uc3 in uc2.^inheritsFrom and uc3 in name.(uc1.alternatives.alternativeScenario.flow.ucName[Int]) )
+    }
 }
 fun extende : UseCase -> UseCase {
-    {  uc1,uc2 : UseCase | some e: uc2.extensions | e.type in EXTERNAL and uc1.mainScenario in e.extensionScenario }
+    {  uc1,uc2 : UseCase | some a: uc2.alternatives | a.type in EXTERNAL and uc1.mainScenario in a.alternativeScenario }
 }
 fun parentsOf[a : Actor] : lone Actor {
     a.(Actor<:inheritsFrom)
@@ -299,275 +323,10 @@ pred isConnected [a : Actor] {
 fun useCasesAssociatedWith[a : Actor] : set UseCase {
     UseCaseModel.use[a]
 }
+fun abstractUseCases : set UseCase {
+    { u : UseCase | u in UseCase.inheritsFrom }
+}
 /* ************************************ */
 // Show
-run { } for 10
+run { } for 6 but exactly 1 Actor, exactly 3 UseCase, exactly 1 BasicFlow, exactly 1 AltFlow, exactly 1 InsertionFlow
 
-// Entities
-one sig ATMUseCaseModel extends UseCaseModel {}    
-/* ************************************ */
-one sig Customer extends User {}    
-/* ************************************ */
-one sig PerformSession, PerformTransaction, HandleInvalidPIN, WithdrawMoney, TransferMoney extends UseCase {}    
-/* ************************************ */
-one sig Ext1,Ext2,Ext3,Ext4,Ext5 extends Extension {}    
-/* ************************************ */
-one sig Flow1,Flow2,Flow3,Flow4 extends BasicFlow {}
-one sig Exception1,Exception2 extends UCException {}
-one sig AltPart1,AltPart2,AltPart3 extends AltPart {}    
-/* ************************************ */
-one sig SystemCantReadCard,CustomerWantsMoreOps,TransactionNotApprovedDueToInvalidPIN,ThirdFailedPinAttempt,NotEnoughMoneyOnHand extends Condition {}
-/* ************************************ */
-one sig Complete1 extends Complete {}    
-one sig Query1,Query2,Query3,Query4,Query5 extends Query {}    
-one sig DecisionBlock1 extends DecisionBlock {}    
-one sig Internal1,Internal2,Internal3,Internal4 extends Internal {}    
-/* ************************************ */
-/*PerformSession*/
-one sig CustomerInsertsCard,SystemVerifiesCard,SystemReadsCard,SystemAsksPIN,
-    CustomerEntersPIN, SystemRequestsOperation, SystemAsksForMoreOps,
-    CustomerWantsNoMoreOps,CustomerEntersNo, SystemEjectsCard, SystemTerminatesSession extends Atom {}    
-one sig IncludePerformTransaction extends Include {}    
-one sig Success1 extends Success {}    
-/*2a.Exception*/
-one sig SystemEjectsCard2,SystemNotifiesCustomer extends Atom {}    
-one sig Failure1 extends Failure {}    
-/*9a.AltPart*/
-one sig CustomerEntersYes extends Atom {}    
-one sig Goto6 extends Goto {}    
-/*ActionSteps*/
-one sig Input1,Input2,Input3,Input4 extends Input {}
-one sig Output1,Output2,Output3,Output4 extends Output {}
-one sig SR1,SR2,SR3,SR4 extends SystemR {}
-one sig SC1 extends SystemCheck {}
-one sig UC1 extends UserChoice {}
-/*StepIDs and ExtensionIDs*/
-one sig Sid1,Sid2,Sid3,Sid4,Sid5,Sid6,Sid7,Sid8,Sid9,Sid10,Sid11,Sid12
-			,Sid13,Sid14,Sid15,Sid16,Sid17,Sid18 extends StepID {}    
-one sig Eid1,Eid2 extends ExtensionID {}    
-/*UC Name*/
-one sig Name1 extends UCName {}    
-/* ************************************ */
-/*PerformTransaction*/
-one sig CustomerSelectsTransaction,SystemRequestsDetails,CustomerEntersDetails,SystemApprovesTransaction,SystemPerformsAdequateSteps,
-        SystemPrintsReceipt extends Atom {}
-/*ActionSteps*/
-one sig Input5,Input6 extends Input {}    
-one sig Output5 extends Output {}    
-one sig SR5,SR6 extends SystemR {}    
-one sig SC2 extends SystemCheck {}    
-/*StepIDs and ExtensionIDs*/
-one sig Sid19,Sid20,Sid21,Sid22,Sid23,Sid24 extends StepID {}    
-one sig Eid3 extends ExtensionID {}    
-/*UC Name*/
-one sig Name2 extends UCName {}    
-/* ************************************ */
-/*HandleInvalidPIN*/
-one sig SystemChecksFailedPINAttempts extends Atom {}    
-one sig Goto4 extends Goto {}    
-/*1a.Exception*/
-one sig SystemRetainsCard,SystemNotifiesCustomer2 extends Atom {}    
-one sig Failure2 extends Failure {}    
-/*ActionSteps*/
-one sig SC3 extends SystemCheck {}    
-one sig SR7 extends SystemR {}    
-one sig Output6 extends Output {}    
-/*stepIDs and ExtensionIDs*/
-one sig Sid25,Sid26,Sid27,Sid28,Sid29 extends StepID {}    
-one sig Eid4 extends ExtensionID {}    
-/*UC Name*/
-one sig Name3 extends UCName {}    
-/* ************************************ */
-/*WithdrawMoney*/
-one sig CustomerSelectsWithdraw,SystemRequestsAccType,CustomerSelectsAccType,SystemRequestsAmount,CustomerEntersAmount,SystemChecksMoneyOnHand,
-        SystemApprovesTransaction2,SystemDispensesCash,SystemPrintsReceipt2 extends Atom {}    
-/*5a.AltPart*/
-one sig SystemNotifiesMoneyNA,SystemRequestsSmallerAmount extends Atom {}    
-one sig GotoW4 extends Goto {}    
-/*ActionSteps*/
-one sig Input7,Input8,Input9 extends Input {}    
-one sig Output7,Output8,Output9,Output10 extends Output {}    
-one sig SC4,SC5 extends SystemCheck {}    
-one sig SR8,SR9 extends SystemR {}    
-/*stepIDs and ExtensionIDs*/
-one sig Sid30,Sid31,Sid32,Sid33,Sid34,Sid35,Sid36,Sid37,Sid38,Sid39,Sid40,Sid41 extends StepID {}    
-one sig Eid5 extends ExtensionID {}    
-/*UC Name*/
-one sig Name4 extends UCName {}    
-/* ************************************ */
-/*TransferMoney*/
-one sig CustomerSelectsTransfer,SystemRequestsAccsAndAmount,CustomerEntersAccsAndAmount,SystemApprovesTransaction3,
-        SystemPrintsReceipt3 extends Atom {}    
-/*ActionSteps*/
-one sig Input10,Input11 extends Input {}    
-one sig Output11 extends Output {}    
-one sig SC6 extends SystemCheck {}    
-one sig SR10 extends SystemR {}    
-/*stepIDs*/
-one sig Sid42,Sid43,Sid44,Sid45,Sid46 extends StepID {}
-/*UC Name*/
-one sig Name5 extends UCName {}    
-/* ************************************ */
-fact ucmodel { actors = ATMUseCaseModel -> Customer
-               use = ATMUseCaseModel -> Customer -> PerformSession
-               useCases = ATMUseCaseModel -> Name1 -> PerformSession + ATMUseCaseModel -> Name2 -> PerformTransaction +
-                         ATMUseCaseModel -> Name3 -> HandleInvalidPIN + ATMUseCaseModel -> Name4 -> WithdrawMoney +
-                         ATMUseCaseModel -> Name5 -> TransferMoney }
-fact usecases { goalLevel = PerformSession -> USERGOAL + PerformTransaction -> SUBFUNCTION + HandleInvalidPIN -> SUBFUNCTION + 
-                    WithdrawMoney -> SUBFUNCTION + TransferMoney -> SUBFUNCTION
-                extensions = PerformSession -> Ext1 + PerformSession -> Ext2 + PerformTransaction -> Ext3 + HandleInvalidPIN -> Ext4 + 
-                    WithdrawMoney -> Ext5 + WithdrawMoney -> Ext3 + TransferMoney -> Ext3
-                name = PerformSession -> Name1 + PerformTransaction -> Name2 + HandleInvalidPIN -> Name3 + WithdrawMoney -> Name4 +
-                    TransferMoney -> Name5
-                mainScenario = PerformSession -> Flow1 + PerformTransaction -> Flow2 + HandleInvalidPIN -> AltPart2 + WithdrawMoney -> Flow3 + 
-                    TransferMoney -> Flow4
-                inheritsFrom = WithdrawMoney -> PerformTransaction + TransferMoney -> PerformTransaction}
-fact extensions { condition = Ext1 -> SystemCantReadCard + Ext2 -> CustomerWantsMoreOps + Ext3 -> TransactionNotApprovedDueToInvalidPIN + 
-                    Ext4 -> ThirdFailedPinAttempt + Ext5 -> NotEnoughMoneyOnHand
-                  type = Ext1 -> INTERNAL + Ext2 -> INTERNAL + Ext3 -> EXTERNAL + Ext4 -> INTERNAL + Ext5 -> INTERNAL
-                  extensionScenario = Ext1 -> Exception1 + Ext2 -> AltPart1 + Ext3 -> AltPart2 + Ext4 -> Exception2 +
-                      Ext5 -> AltPart3
-                  id = Ext1 -> Eid1 + Ext2 -> Eid2 + Ext3 -> Eid3 + Ext4 -> Eid4 + Ext5 -> Eid5 }
-fact flows { flow =
-                    /*basic flows*/
-                    Flow1 -> 0 -> Complete1 + 
-                    Flow1 -> 1 -> Query1 + 
-                    Flow1 -> 2 -> IncludePerformTransaction +
-                    Flow1 -> 3 -> SystemAsksForMoreOps +
-                    Flow1 -> 4 -> DecisionBlock1 +
-                    Flow1 -> 5 -> Internal1 +
-                    Flow1 -> 6 -> Success +
-
-                    Flow2 -> 0 -> Query2 +
-                    Flow2 -> 1 -> Internal2 +
-
-                    Flow3 -> 0 -> Query3 +
-                    Flow3 -> 1 -> Query4 +
-                    Flow3 -> 2 -> Internal3 +
-
-                    Flow4 -> 0 -> Query5 +
-                    Flow4 -> 1 -> Internal4 +
-
-                    /*alt flows*/
-                    Exception1 -> 0 -> SystemEjectsCard2 +
-                    Exception1 -> 1 -> SystemNotifiesCustomer +
-                    Exception1 -> 2 -> Failure1 +
-                    AltPart1 -> 0 -> CustomerEntersYes +
-                    AltPart1 -> 1 -> Goto6 +
-
-                    AltPart2 -> 0 -> SystemChecksFailedPINAttempts +
-                    AltPart2 -> 1 -> Goto4 +
-                    Exception2 -> 0 -> SystemRetainsCard +
-                    Exception2 -> 1 -> SystemNotifiesCustomer2 +
-                    Exception2 -> 2 -> Failure2 +
-
-                    AltPart3 -> 0 -> SystemNotifiesMoneyNA +
-                    AltPart3 -> 1 -> SystemRequestsSmallerAmount +
-                    AltPart3 -> 2 -> GotoW4
-}
-fact actionBlocks { actionSteps = Complete1 -> 0 -> CustomerInsertsCard + 
-                    Complete1 -> 1 -> SystemVerifiesCard +
-                    Complete1 -> 2 -> SystemReadsCard +
-                    Complete1 -> 3 -> SystemAsksPIN +
-                    Query1 -> 0 -> CustomerEntersPIN +
-                    Query1 -> 1 -> SystemRequestsOperation +
-                    DecisionBlock1 -> 0 -> CustomerWantsNoMoreOps +
-                    Internal1 -> 0 -> CustomerEntersNo +
-                    Internal1 -> 1 -> SystemEjectsCard +
-                    Internal1 -> 2 -> SystemTerminatesSession +
-
-                    Query2 -> 0 -> CustomerSelectsTransaction +
-                    Query2 -> 1 -> SystemRequestsDetails +
-                    Internal2 -> 0 -> CustomerEntersDetails +
-                    Internal2 -> 1 -> SystemApprovesTransaction +
-                    Internal2 -> 2 -> SystemPerformsAdequateSteps +
-                    Internal2 -> 3 -> SystemPrintsReceipt +
-
-                    Query3 -> 0 -> CustomerSelectsWithdraw +
-                    Query3 -> 1 -> SystemRequestsAccType +
-                    Query4 -> 0 -> CustomerSelectsAccType +
-                    Query4 -> 1 -> SystemRequestsAmount +
-                    Internal3 -> 0 -> CustomerEntersAmount +
-                    Internal3 -> 1 -> SystemChecksMoneyOnHand +
-                    Internal3 -> 2 -> SystemApprovesTransaction2 +
-                    Internal3 -> 3 -> SystemDispensesCash +
-                    Internal3 -> 4 -> SystemPrintsReceipt2 +
-
-                    Query5 -> 0 -> CustomerSelectsTransfer +
-                    Query5 -> 1 -> SystemRequestsAccsAndAmount +
-                    Internal4 -> 0 -> CustomerEntersAccsAndAmount +
-                    Internal4 -> 1 -> SystemApprovesTransaction3 +
-                    Internal4 -> 2 -> SystemPrintsReceipt3 
-}
-fact atoms { stepType = CustomerInsertsCard -> Input1 +
-               SystemVerifiesCard -> SC1 +
-               SystemReadsCard -> SR1 +
-               SystemAsksPIN -> Output1 +
-               CustomerEntersPIN -> Input2 +
-               SystemRequestsOperation -> Output2 +
-               SystemAsksForMoreOps -> Output3 +
-               CustomerWantsNoMoreOps -> UserChoice +
-               CustomerEntersNo -> Input3 +
-               SystemEjectsCard -> SR2 +
-               SystemTerminatesSession -> SR3 +
-
-               SystemEjectsCard2 -> SR4 +
-               SystemNotifiesCustomer -> Output4 +
-
-               CustomerEntersYes -> Input4 +
-
-               CustomerSelectsTransaction -> Input5 +
-               SystemRequestsDetails -> Output5 +
-               CustomerEntersDetails -> Input6 +
-               SystemApprovesTransaction -> SC2 +
-               SystemPerformsAdequateSteps -> SR5 +
-               SystemPrintsReceipt -> SR6 +
-
-               SystemChecksFailedPINAttempts -> SC3 +
-
-               SystemRetainsCard -> SR7 +
-               SystemNotifiesCustomer2 -> Output6 +
-
-                CustomerSelectsWithdraw -> Input7 +
-                SystemRequestsAccType -> Output7 +
-                CustomerSelectsAccType -> Input8 +
-                SystemRequestsAmount -> Output8 +
-                CustomerEntersAmount -> Input9 +
-                SystemChecksMoneyOnHand -> SC4 +
-                SystemApprovesTransaction2 -> SC5 +
-                SystemDispensesCash -> SR8 +
-                SystemPrintsReceipt2 -> SR9 +
-
-                SystemNotifiesMoneyNA -> Output9 +
-                SystemRequestsSmallerAmount -> Output10 +
-
-                CustomerSelectsTransfer -> Input10 +
-                SystemRequestsAccsAndAmount -> Output11 +
-                CustomerEntersAccsAndAmount -> Input11 +
-                SystemApprovesTransaction3 -> SC6 +
-                SystemPrintsReceipt3 -> SR10
-}
-fact steps { stepID = CustomerInsertsCard -> Sid1 + SystemVerifiesCard -> Sid2 + SystemReadsCard -> Sid3 +
-            SystemAsksPIN -> Sid4 + CustomerEntersPIN -> Sid5 + SystemRequestsOperation -> Sid6 +
-            SystemAsksForMoreOps -> Sid7 + CustomerWantsNoMoreOps -> Sid8 + CustomerEntersNo -> Sid9 +
-            SystemEjectsCard -> Sid10 + SystemTerminatesSession -> Sid11 + SystemEjectsCard2 -> Sid12 +
-            SystemNotifiesCustomer -> Sid13 + CustomerEntersYes -> Sid14 + Success1 -> Sid15 +
-            Goto6 -> Sid16 + Failure1 -> Sid17 + IncludePerformTransaction -> Sid18 +
-                        
-            CustomerSelectsTransaction -> Sid19 + SystemRequestsDetails -> Sid20 + CustomerEntersDetails -> Sid21 +
-            SystemApprovesTransaction -> Sid22 + SystemPerformsAdequateSteps -> Sid23 + SystemPrintsReceipt -> Sid24 +
-
-            SystemChecksFailedPINAttempts -> Sid25 + Goto4 -> Sid26 + SystemRetainsCard -> Sid27 + SystemNotifiesCustomer2 -> Sid28 +
-            Failure2 -> Sid29 +
-
-            CustomerSelectsWithdraw -> Sid30 + SystemRequestsAccType -> Sid31 + CustomerSelectsAccType -> Sid32 +
-            SystemRequestsAmount -> Sid33 + CustomerEntersAmount -> Sid34 + SystemChecksMoneyOnHand -> Sid35 +
-            SystemApprovesTransaction2 -> Sid36 + SystemDispensesCash -> Sid37 + SystemPrintsReceipt2 -> Sid38 + 
-            SystemNotifiesMoneyNA -> Sid39 + SystemRequestsSmallerAmount -> Sid40 + GotoW4 -> Sid41 + 
-
-            CustomerSelectsTransfer -> Sid42 + SystemRequestsAccsAndAmount -> Sid43 + CustomerEntersAccsAndAmount -> Sid44 +
-            SystemApprovesTransaction3 -> Sid45 + SystemPrintsReceipt3 -> Sid46
-}
-fact gotos { otherStepID = Goto6 -> Sid6 + Goto4 -> Sid4 + GotoW4 -> Sid33 }
-fact choices { Choice <: extensions = SC1 -> Eid1 + UC1 -> Eid2 + SC2 -> Eid3 + SC3 -> Eid4 + SC4 -> Eid5 + SC5 -> Eid3 + SC6 -> Eid3 }
-fact includes { ucName = IncludePerformTransaction -> Name2 }
