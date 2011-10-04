@@ -25,7 +25,7 @@ abstract one sig UseCaseModel {
 /* ************************************ */
 /* Actores */
 abstract sig Actor {
-    inheritsFrom: lone Actor    
+    inheritsFrom: lone Actor
 } {
     // todos os actores existentes pertencem ao UseCaseModel
     this in UseCaseModel.actors    
@@ -43,47 +43,95 @@ abstract sig UseCase {
     goalLevel: one GoalLevel,
 	mainScenario: one Flow,
 	alternatives: set Alternative,
-    inheritsFrom: set UseCase
+    extensionPoints: set ExtensionPoint,
+    inheritsFrom: set UseCase,
+    include: set UseCase,
+    extend: set UseCase
 }{
 	// o conj de alternativas de um UC é igual ao conj de
 	// alternativas dos seus passos
 	alternatives = { a: Alternative | 
 		a.id in (mainScenario.flow.stepType[Int]).alternatives +
         (ActionBlock <: mainScenario.flow[Int]).actionSteps[Int].(stepType.alternatives)}
+    // o conj de extension points de um UC é igual ao conjunto das alternativas externas, ou seja,
+    // alternativas cujo fluxo está contido num outro UC (de extensão), que derivam dos seus passos
+    /*all a: alternatives | a.type in EXTERNAL => */
+    /*    one ep:ExtensionPoint | */
+    /*        ep.step in a.id.~alternatives.~flow.*/ -- TODO: refazer depois de se fazer a funcao que flatten um use case
+    // há tantos ExtensionPoints quantas alternatives externas
+    #extensionPoints = #{ a: alternatives | a.type in EXTERNAL }
     // todos os UseCase têm de pertencer ao UseCaseModel
     this in UseCaseModel.useCases[UCName]
     // o mainScenario dos UC 'usados' pelo Actor,
-    // é um BasicFlow ou um EmptyFlow (no caso do uc ser abstracto)
-    this in UseCaseModel.use[Actor] => mainScenario in BasicFlow + EmptyFlow
+    // é um MainFlow ou um EmptyFlow (no caso do uc ser abstracto)
+    this in UseCaseModel.use[Actor] => mainScenario in MainFlow + EmptyFlow
     // os use cases utilizados pelo actores são do tipo USERGOAL
     this in UseCaseModel.use[Actor] => goalLevel in USERGOAL
     // os use cases de especialização têm o mesmo tipo do use case que especializam
     some inheritsFrom => goalLevel in inheritsFrom.@goalLevel
     // todos os UC têm de ser 'usados' por um Actor, extender um UC, ser íncluido por um UC, ou herdar de um UC
-    this in UseCaseModel.use[Actor] + extende.UseCase + inclui[UseCase] + @inheritsFrom.UseCase
+    this in UseCaseModel.use[Actor] + extendeConcreto.UseCase + @include[UseCase] + @inheritsFrom.UseCase
     // o mainScenario de um UC não pode ser o mesmo de uma das suas alternativas
     mainScenario not in alternatives.alternativeScenario
     // não existe herança múltipla entre UCs
     lone inheritsFrom
-    // o fluxo de UCs abstractos é vazio (e o dos concretos não
-    this in abstractUseCases => mainScenario in EmptyFlow /*else mainScenario not in EmptyFlow*/
-    // UCs incluídos não podem ser 'usados' directamente (?)
-    this in UseCase.inclui => this not in UseCaseModel.use[Actor]
+    // o fluxo de UCs abstractos é vazio (e o dos concretos não)
+    this in abstractUseCases => mainScenario in EmptyFlow else mainScenario not in EmptyFlow
+    // UCs incluídos não podem ser 'usados' directamente (?) (não. ver artigo jot dos iod)
+    this in UseCase.@include => this not in UseCaseModel.use[Actor]
     // UCs incluídos são do tipo SUBFUNCTION 
-    this in UseCase.inclui => goalLevel in SUBFUNCTION
-    // Fluxos de alternativa como AltHistory, ou UCException só podem ser caminho principal de UCs de extensão
+    this in UseCase.@include => goalLevel in SUBFUNCTION
+    // O tipo de fluxo UCException só podem ser caminho principal de UCs de extensão
     // (não podem ser AltPart)
-    mainScenario in AltHistory + UCException => this in extende.UseCase
+    mainScenario in UCException => this in extendeConcreto.UseCase
+    // para todos os use cases incluidos que sejam concretos,
+    // há pelo menos um passo Include que referencie esse use case
+    all uc: include - abstractUseCases | some i:Include | 
+        i in Int.(mainScenario.flow + alternatives.alternativeScenario.flow) and i.ucName in uc.@name
+    // para todos os use cases incluidos que sejam abstractos,
+    // há pelo menos um passo Include que referencie cada use case que especialize o use case abstracto
+    all uc: include & abstractUseCases | some i:Include |
+        i in Int.(mainScenario.flow + alternatives.alternativeScenario.flow ) and i.ucName in uc.~@inheritsFrom.@name
+    // se um use case 'a' extende um use case 'b', isso significa que 'b' tem pelo menos uma alternativa externa 
+    // cujo fluxo é o mainScenario de 'a' (no case de 'b' ser um use case concreto)
+    all uc: extend - abstractUseCases | some a: Alternative | a in uc.@alternatives and a.type in EXTERNAL
+                                            and a.alternativeScenario in uc.@mainScenario
+    // se um use case 'a' extende um use case 'b' (abstracto), isso significa que cada um dos use cases
+    // que especializam 'b' tem uma alternativa cujo fluxo é o mainScenario de 'a'
+    all uc: extend & abstractUseCases | some a: Alternative | a in uc.~@inheritsFrom.@alternatives and a.type in EXTERNAL
+                                            and a.alternativeScenario in uc.~@inheritsFrom.@mainScenario
+    // as inclusões implementadas pelos passos Include têm de ter uma representação diagramática correspondente, ou seja,
+    // se na especificação textual de um UC há um passo de inclusão de outro UC, essa inclusão tem de estar explicitada no diagrama
+    // ( a relação include corresponde à representação diagramática, e a função includesConcretos corresponde à representação textual )
+    this.includesConcretos in include
+    // um UC abstracto tem de ter, no mínimo, duas especializações
+    this in abstractUseCases => #this.~@inheritsFrom >= 2
+    // o fluxo de ucs de tipo USERGOAL é do tipo MainFlow
+    goalLevel in USERGOAL => mainScenario in MainFlow
+    // se um uc é especialização de outro, então não o pode exteder ou incluir, pois introduziria extensões ou inclusões cíclicas
+    some uc: UseCase | uc in inheritsFrom => uc not in include and uc not in extend
+    // ucs incluidos não podem falhar
+    this in UseCase.includesConcretos => mainScenario not in UCException and 
+                    all a: alternatives | a.alternativeScenario not in UCException
 }
 
-fact extensoesAciclicas { acyclic[extende, UseCase] and
-                            all u,u':UseCase | u' in u.^inclui => u' not in u.extende }
+fact extensoesAciclicas { acyclic[extendeConcreto, UseCase] and
+                            all u,u':UseCase | u' in u.^include => u' not in u.extendeConcreto }
 
 enum GoalLevel { USERGOAL, SUBFUNCTION }
 // inheritsFrom é assimétrico, irreflexivo e acíclico
 fact { acyclic[UseCase <: inheritsFrom, UseCase]}
 fact { bijective[name, UCName] }
 
+/* ************************************ */
+/* Extension Point */
+abstract sig ExtensionPoint {
+    epname: one EPName,
+    step: one Int
+} {
+    this in UseCase.extensionPoints
+}
+abstract sig EPName {} { this in ExtensionPoint.epname }
 /* ************************************ */
 /* Fluxos */
 abstract sig Flow { 
@@ -104,34 +152,33 @@ abstract sig AltFlow extends Flow {} {
 	#flow > 1
 }
 abstract sig AltPart     extends AltFlow {} { last[flow] in Goto    }
-abstract sig AltHistory  extends AltFlow {} { last[flow] in Success }
 abstract sig UCException extends AltFlow {} { 
     last[flow] in Failure
     // a partir do momento em que se entra numa UCException, não é possível recuperar e entrar num fluxo que resulte em sucesso, ou seja,
-    // alternativas com origem em UCException's, não podem ser do tipo AltHistory
-    flow.stepType.alternatives.~id.alternativeScenario[Int] not in AltHistory and
-        flow.actionSteps.stepType.alternatives.~id.alternativeScenario[Int][Int] not in AltHistory
+    // alternativas com origem em UCException's, não podem ser do tipo AltHistory (já não ha AltHistory logo, já não é possivel uma 
+    // alternativa de uma excepção alcançar o sucesso.)
+    /*flow.stepType.alternatives.~id.alternativeScenario[Int] not in AltHistory and*/
+    /*    flow.actionSteps.stepType.alternatives.~id.alternativeScenario[Int][Int] not in AltHistory*/
+
 }
 
-abstract sig BasicFlow extends Flow {} {
-    // os fluxos básicos de uc's de nivel USERGOAL terminam sempre em sucesso
-    this.~mainScenario.goalLevel in USERGOAL => last[flow] in Success    
-    // excepto o passo de Success, o corpo de BasicFlows é composto só por ActionBlocks e, eventualmente, passos Include
+abstract sig MainFlow extends Flow {} {
+    // os fluxos principais terminam sempre em sucesso
+    last[flow] in Success    
+    // excepto o passo de Success, o corpo de MainFlows é composto só por ActionBlocks e, eventualmente, passos Include
     Int.(butlast[flow]) in ActionBlock + Include
 	// os basic flows têm de ter pelo menos dois passos
 	#flow > 1
 }
 
-one sig EmptyFlow extends Flow{} {
-    // este tipo de Flow só pode fazer parte de use cases abstractos
-    this in abstractUseCases.mainScenario
+lone sig EmptyFlow extends Flow{} {
 	// os emtpy flows não contêm qualquer passo
 	#flow = 0
 }
 abstract sig InsertionFlow extends Flow {} { 
     last[flow] in Resume
-    // este tipo de fluxo apenas diz respeito a UCs de extensão ou inclusão
-    this in extende.UseCase.mainScenario + UseCase.inclui.mainScenario
+    // este tipo de fluxo diz respeito a UCs de extensão ou inclusão
+    this in extendeConcreto.UseCase.mainScenario + UseCase.includesConcretos.mainScenario
     #flow > 1
 }
 /* ************************************ */
@@ -146,9 +193,9 @@ abstract sig Alternative {
 	this in UseCase.alternatives
     // se a extensão for externa então o AltFlow está contido noutro UC
     type in EXTERNAL => alternativeScenario in UseCase.mainScenario
-    // se a alternativa corresponder a um UC de extensão, o seu fluxo só pode ser um AltHistory, UCException, ou InsertionFlow.
+    // se a alternativa corresponder a um UC de extensão, o seu fluxo só pode ser um UCException ou InsertionFlow.
     // de modo a evitar Goto's perigosos, ou seja, que apontem para passos de outros UC
-    type in EXTERNAL => alternativeScenario in AltHistory+UCException+InsertionFlow
+    type in EXTERNAL => alternativeScenario in UCException+InsertionFlow
     // as alternativas correspondentes a passos do tipo UserDecision são iniciadas por um passo do tipo Input
     (some c : id.~alternatives | c in UserDecision) => first[alternativeScenario.flow].stepType in Input
     // as alternativas correspondentes a passos do tipo SystemValidation são iniciadas por um passo do tipo SystemR ou Output
@@ -232,8 +279,8 @@ abstract sig Complete extends ActionBlock {
 abstract sig Step{ stepID: one StepID } { 
     // para não haver Steps soltos
     this in Flow.flow[Int] + ActionBlock.actionSteps[Int]
-    // um Step só pode aparecer uma vez num flow e apenas num único flow
-    /*lone flow.this*/
+    // um Step só pode aparecer uma vez num flow e apenas num único flow, excepto se for Success, Failure, ou Resume
+    this not in Success + Failure + Resume => lone flow.this
 }
 
 fact { bijective[stepID, StepID] }
@@ -257,9 +304,9 @@ abstract sig Goto extends Step{
 	otherStepID: one StepID
 } {
     // o StepID referenciado pelo otherStepID de cada Goto só pode pertencer a passos que estejam contidos no fluxo que a extensão à qual esse Goto 
-    // pertence extende, ou seja, os Goto só podem apontar para o fluxo pai (mas nunca para outros Goto, Failure ou Success; não faz sentido).
+    // pertence extende, ou seja, os Goto só podem apontar para o fluxo pai.
    let flowDoPai = this.~(select13[flow]).~alternativeScenario.~alternatives.mainScenario.flow[Int] {
-        otherStepID in (flowDoPai.@stepID + (flowDoPai.actionSteps[Int]).@stepID) - Goto.@stepID - Failure.@stepID - Success.@stepID
+        otherStepID in (flowDoPai.@stepID + (flowDoPai.actionSteps[Int]).@stepID)
     }
 }
 
@@ -268,10 +315,14 @@ abstract sig Include extends Step{
 	ucName: one UCName
 } {
     this in Int.(UseCase.alternatives.alternativeScenario.flow + UseCase.mainScenario.flow)    
+    // os passos Include não podem incluir UCs abstractos
+    ucName not in abstractUseCases.name
 }
+
 fact { ran[ucName] in mid[useCases] } 
 // não há inclusões cíclicas
-fact { acyclic[inclui, UseCase] } 
+fact { acyclic[include, UseCase] } 
+fact { acyclic[includesConcretos, UseCase] } 
 
 abstract sig UCName{}
 /* Success and Failure */
@@ -301,14 +352,13 @@ abstract sig SystemValidation extends Choice {}
 /*one sig SystemVerification extends Choice {}*/
 /* ************************************ */
 /* Helper Functions */
-fun inclui : UseCase -> UseCase { 
+-- função que devolve todos os pares de use cases (a,b) em que 'a' inclui 'b' e 'b' não é abstracto
+fun includesConcretos : UseCase -> UseCase { 
 	{ uc1,uc2 : UseCase | uc2 in name.(uc1.mainScenario.flow.ucName[Int]) or
-                          uc2 in name.(uc1.alternatives.alternativeScenario.flow.ucName[Int]) or
-                          (some uc3: UseCase | uc3 in uc2.^inheritsFrom and uc3 in name.(uc1.mainScenario.flow.ucName[Int]) ) or
-                          (some uc3: UseCase | uc3 in uc2.^inheritsFrom and uc3 in name.(uc1.alternatives.alternativeScenario.flow.ucName[Int]) )
+                          uc2 in name.(uc1.alternatives.alternativeScenario.flow.ucName[Int]) 
     }
 }
-fun extende : UseCase -> UseCase {
+fun extendeConcreto : UseCase -> UseCase {
     {  uc1,uc2 : UseCase | some a: uc2.alternatives | a.type in EXTERNAL and uc1.mainScenario in a.alternativeScenario }
 }
 fun parentsOf[a : Actor] : lone Actor {
@@ -328,5 +378,5 @@ fun abstractUseCases : set UseCase {
 }
 /* ************************************ */
 // Show
-run { } for 6 but exactly 1 Actor, exactly 3 UseCase, exactly 1 BasicFlow, exactly 1 AltFlow, exactly 1 InsertionFlow
+run { } for 6 but exactly 1 Actor, exactly 4 UseCase
 
